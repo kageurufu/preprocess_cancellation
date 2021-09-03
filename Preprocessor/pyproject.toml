@@ -1,0 +1,12 @@
+[tool.black]
+line_length = 120
+
+
+[tool.poetry]
+name = "klipper-preprocessor"
+version = "0.0.1"
+description = ""
+authors = ["Frank Tackit <kage.urufu@gmail.com>"]
+
+[tool.poetry.dev-dependencies]
+black = "*"
