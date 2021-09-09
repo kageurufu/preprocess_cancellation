@@ -1,17 +1,77 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
+from typing import Optional, List, Tuple, Set, Dict
+
 import argparse
-import re
-import sys
 import json
 import pathlib
+import re
+import sys
+
+try:
+    import shapely.geometry
+except ImportError:
+    shapely = None
+
+Point = Tuple[float, float]
 
 
-def _dump_coords(coords: list[float]) -> str:
+def boundingbox(pmin: Point, pmax: Point):
+    return [
+        (pmin[0], pmin[1]),
+        (pmin[0], pmax[1]),
+        (pmax[0], pmax[1]),
+        (pmax[0], pmin[1]),
+    ]
+
+
+class HullTracker:
+    def __init__(self):
+        self.pos = None
+        self.points: Set[Point] = set()
+
+    def add_point(self, point: Point):
+        self.points.add(point)
+
+    def center(self):
+        if self.points:
+            x = sum(p[0] for p in self.points)
+            y = sum(p[1] for p in self.points)
+            return x / len(self.points), y / len(self.points)
+
+    def exterior(self):
+        if self.points:
+            points = iter(self.points)
+            first = next(points)
+            min_x = max_x = first[0]
+            min_y = max_y = first[1]
+
+            for (x, y) in points:
+                if x < min_x:
+                    min_x = x
+                if x > max_x:
+                    max_x = x
+                if y < min_y:
+                    min_y = y
+                if y > max_y:
+                    max_y = y
+
+            return boundingbox((min_x, min_y), (max_x, max_y))
+
+
+def _dump_coords(coords: List[float]) -> str:
     return ",".join(map(str, coords))
 
 
 def _clean_id(id):
     return re.sub(r"\W+", "_", id).strip("_")
+
+
+def parse_gcode(line):
+    command, *params = line.strip().split()
+    params = {p[0].upper(): p[1:] for p in params}
+    return command, params
 
 
 def header(object_count):
@@ -22,17 +82,17 @@ def header(object_count):
 
 def define_object(
     name,
-    object_center=None,
-    boundingbox_center=None,
-    boundingbox_size=None,
+    center: Optional[Point] = None,
+    polygon: Optional[Point] = None,
+    region: Optional[List[Point]] = None,
 ):
     yield f"DEFINE_OBJECT NAME={name}"
-    if object_center:
-        yield f" OBJECT_CENTER={_dump_coords(object_center)}"
-    if boundingbox_center:
-        yield f" BOUNDINGBOX_CENTER={_dump_coords(boundingbox_center)}"
-    if boundingbox_size:
-        yield f" BOUNDINGBOX_SIZE={_dump_coords(boundingbox_size)}"
+    if center:
+        yield f" CENTER={_dump_coords(center)}"
+    if polygon:
+        yield f" POLYGON={json.dumps(polygon, separators=(',', ':'))}"
+    if region:
+        yield f" REGION={_dump_coords(region, separators=(',', ':'))}"
     yield "\n"
 
 
@@ -45,7 +105,9 @@ def object_end_marker(object_name):
 
 
 def preprocess_cura(infile):
-    known_objects = {}
+    known_objects: Dict[str, Tuple[str, HullTracker]] = {}
+    current_hull: Optional[HullTracker] = None
+
     # iterate the file twice, to be able to inject the header markers
     for line in infile:
         if line.startswith(";MESH:"):
@@ -53,7 +115,15 @@ def preprocess_cura(infile):
             if object_name == "NONMESH":
                 continue
             if object_name not in known_objects:
-                known_objects[object_name] = _clean_id(object_name)
+                known_objects[object_name] = (_clean_id(object_name), HullTracker())
+            current_hull = known_objects[object_name][1]
+
+        if current_hull and line.strip().lower().startswith("g"):
+            command, params = parse_gcode(line)
+            if "E" in params and "X" in params and "Y" in params:
+                x = float(params["X"])
+                y = float(params["Y"])
+                current_hull.add_point((x, y))
 
     infile.seek(0)
     for line in infile:
@@ -63,8 +133,12 @@ def preprocess_cura(infile):
 
     # Inject custom marker
     yield from header(len(known_objects))
-    for object in known_objects:
-        yield from define_object(object)
+    for mesh_id, hull in known_objects.values():
+        yield from define_object(
+            mesh_id,
+            center=hull.center(),
+            polygon=hull.exterior(),
+        )
 
     current_object = None
     for line in infile:
@@ -77,7 +151,7 @@ def preprocess_cura(infile):
             mesh = line.split(":", maxsplit=1)[1].strip()
             if mesh == "NONMESH":
                 continue
-            current_object = known_objects[mesh]
+            current_object, _ = known_objects[mesh]
             yield from object_start_marker(current_object)
 
 
@@ -104,11 +178,18 @@ def preprocess_superslicer(infile):
             # Done. Header time
             yield from header(len(known_objects))
             for object_data in known_objects.values():
+                polygon = None
+                boundingbox_center = object_data.get("boundingbox_center", None)
+                boundingbox_size = object_data.get("boundingbox_size", None)
+                if boundingbox_center and boundingbox_size:
+                    [x, y, *_] = boundingbox_center
+                    [w, h, *_] = boundingbox_size
+                    polygon = boundingbox((x - w / 2, y - h / 2), (x + w / 2, y + h / 2))
+
                 yield from define_object(
                     object_data["clean_id"],
-                    object_center=object_data.get("object_center"),
-                    boundingbox_center=object_data.get("boundingbox_center"),
-                    boundingbox_size=object_data.get("boundingbox_size"),
+                    center=object_data.get("object_center"),
+                    polygon=polygon,
                 )
 
             break
@@ -124,11 +205,21 @@ def preprocess_superslicer(infile):
 
 
 def preprocess_slicer(infile):
-    known_objects = {}
+    known_objects: Dict[str, Tuple[str, HullTracker]] = {}
+    current_hull: Optional[HullTracker] = None
     for line in infile:
         if line.startswith("; printing object "):
             object_id = line.split("printing object")[1].strip()
-            known_objects[object_id] = _clean_id(object_id)
+            if object_id not in known_objects:
+                known_objects[object_id] = (_clean_id(object_id), HullTracker())
+            current_hull = known_objects[object_id][1]
+
+        if current_hull and line.strip().lower().startswith("g"):
+            command, params = parse_gcode(line)
+            if "E" in params and "X" in params and "Y" in params:
+                x = float(params["X"])
+                y = float(params["Y"])
+                current_hull.add_point((x, y))
 
     infile.seek(0)
 
@@ -137,8 +228,12 @@ def preprocess_slicer(infile):
 
         if line.startswith("; generated by"):
             yield from header(len(known_objects))
-            for object_id in known_objects.values():
-                yield from define_object(object_id)
+            for object_id, hull in known_objects.values():
+                yield from define_object(
+                    object_id,
+                    center=hull.center(),
+                    polygon=hull.exterior(),
+                )
 
         if line.startswith("; printing object "):
             yield from object_start_marker(known_objects[line.split("printing object")[1].strip()])
@@ -153,17 +248,29 @@ def preprocess_ideamaker(infile):
     #   ;PRINTING: test_bed_part0.3mf
     #   ;PRINTING_ID: 0
 
-    known_objects = {}
-    for name_line in infile:
-        if name_line.startswith(";PRINTING:"):
-            name = name_line.split(":")[1].strip()
+    known_objects: Dict[str, Tuple[str, HullTracker]] = {}
+    current_hull: HullTracker = None
+
+    for line in infile:
+        if line.startswith(";PRINTING:"):
+            name = line.split(":")[1].strip()
             id_line = next(infile)
             assert id_line.startswith(";PRINTING_ID:")
             id = id_line.split(":")[1].strip()
             # Ignore the internal non-object meshes
             if id == "-1":
                 continue
-            known_objects[id] = name
+            if id not in known_objects:
+                known_objects[id] = (name, HullTracker())
+            current_hull = known_objects[id][1]
+
+        if current_hull and line.strip().lower().startswith("g"):
+            command, params = parse_gcode(line)
+            if "E" in params and "X" in params and "Y" in params:
+                x = float(params["X"])
+                y = float(params["Y"])
+                current_hull.add_point((x, y))
+
     infile.seek(0)
 
     for line in infile:
@@ -173,8 +280,12 @@ def preprocess_ideamaker(infile):
             total_num = int(line.split(":")[1].strip())
             assert total_num == len(known_objects)
             yield from header(total_num)
-            for i in range(total_num):
-                yield from define_object(i)
+            for id, (name, hull) in known_objects.items():
+                yield from define_object(
+                    f"1_{_clean_id(name)}",
+                    center=hull.center(),
+                    polygon=hull.exterior(),
+                )
 
         current_object = None
         if line.startswith(";PRINTING_ID:"):
@@ -191,7 +302,7 @@ def preprocess_ideamaker(infile):
 # Note:
 #   Slic3r does not output any markers into GCode
 #   Kisslicer does not output any markers into GCode
-SLICERS: dict[str, tuple[str, callable]] = {
+SLICERS: dict[str, Tuple[str, callable]] = {
     "superslicer": ("; generated by SuperSlicer", preprocess_superslicer),
     "prusaslicer": ("; generated by PrusaSlicer", preprocess_slicer),
     "slic3r": ("; generated by Slic3r", preprocess_slicer),
