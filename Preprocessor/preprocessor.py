@@ -8,6 +8,7 @@ import json
 import pathlib
 import re
 import sys
+import tempfile
 
 try:
     import shapely.geometry
@@ -359,16 +360,17 @@ if __name__ == "__main__":
         if args.output_suffix:
             outfilepath = outfilepath.with_name(outfilepath.stem + args.output_suffix + outfilepath.suffix)
 
-        tempfilepath = outfilepath.with_suffix(".~temp")
+        tempfilepath = pathlib.Path(tempfile.mktemp())
 
         with filepath.open("r") as fin:
             with tempfilepath.open("w") as fout:
                 res = preprocessor(fin, fout)
 
-            if res:
-                tempfilepath.rename(outfilepath)
-            else:
-                tempfilepath.unlink()
+        if res:
+            filepath.unlink()
+            tempfilepath.rename(outfilepath)
+        else:
+            tempfilepath.unlink()
 
             exitcode = 1
 
