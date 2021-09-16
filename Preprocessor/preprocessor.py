@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from typing import Optional, List, Tuple, Set, Dict
+from typing import Any, NamedTuple, Optional, List, Tuple, Set, Dict, TypedDict
 
 import argparse
 import json
@@ -10,21 +10,10 @@ import re
 import sys
 import tempfile
 
-try:
-    import shapely.geometry
-except ImportError:
-    shapely = None
 
-Point = Tuple[float, float]
-
-
-def boundingbox(pmin: Point, pmax: Point):
-    return [
-        (pmin[0], pmin[1]),
-        (pmin[0], pmax[1]),
-        (pmax[0], pmax[1]),
-        (pmax[0], pmin[1]),
-    ]
+class Point(NamedTuple):
+    x: float
+    y: float
 
 
 class HullTracker:
@@ -59,6 +48,20 @@ class HullTracker:
                     max_y = y
 
             return boundingbox((min_x, min_y), (max_x, max_y))
+
+
+class KnownObject(NamedTuple):
+    name: str
+    hull: HullTracker
+
+
+def boundingbox(pmin: Point, pmax: Point):
+    return [
+        (pmin[0], pmin[1]),
+        (pmin[0], pmax[1]),
+        (pmax[0], pmax[1]),
+        (pmax[0], pmin[1]),
+    ]
 
 
 def _dump_coords(coords: List[float]) -> str:
@@ -106,8 +109,9 @@ def object_end_marker(object_name):
 
 
 def preprocess_cura(infile):
-    known_objects: Dict[str, Tuple[str, HullTracker]] = {}
+    known_objects: Dict[str, KnownObject] = {}
     current_hull: Optional[HullTracker] = None
+    last_time_elapsed: str = None
 
     # iterate the file twice, to be able to inject the header markers
     for line in infile:
@@ -116,15 +120,18 @@ def preprocess_cura(infile):
             if object_name == "NONMESH":
                 continue
             if object_name not in known_objects:
-                known_objects[object_name] = (_clean_id(object_name), HullTracker())
-            current_hull = known_objects[object_name][1]
+                known_objects[object_name] = KnownObject(_clean_id(object_name), HullTracker())
+            current_hull = known_objects[object_name].hull
 
         if current_hull and line.strip().lower().startswith("g"):
             command, params = parse_gcode(line)
             if "E" in params and "X" in params and "Y" in params:
                 x = float(params["X"])
                 y = float(params["Y"])
-                current_hull.add_point((x, y))
+                current_hull.add_point(Point(x, y))
+
+        if line.startswith(";TIME_ELAPSED:"):
+            last_time_elapsed = line
 
     infile.seek(0)
     for line in infile:
@@ -155,9 +162,16 @@ def preprocess_cura(infile):
             current_object, _ = known_objects[mesh]
             yield from object_start_marker(current_object)
 
+        if line == last_time_elapsed and current_object:
+            yield from object_end_marker(current_object)
+            current_object = None
+
+    if current_object:
+        yield from object_end_marker(current_object)
+
 
 def preprocess_superslicer(infile):
-    known_objects = {}
+    known_objects: Dict[str, Dict[str, Any]] = {}
 
     for line in infile:
         yield line
@@ -206,21 +220,21 @@ def preprocess_superslicer(infile):
 
 
 def preprocess_slicer(infile):
-    known_objects: Dict[str, Tuple[str, HullTracker]] = {}
+    known_objects: Dict[str, KnownObject] = {}
     current_hull: Optional[HullTracker] = None
     for line in infile:
         if line.startswith("; printing object "):
             object_id = line.split("printing object")[1].strip()
             if object_id not in known_objects:
-                known_objects[object_id] = (_clean_id(object_id), HullTracker())
-            current_hull = known_objects[object_id][1]
+                known_objects[object_id] = KnownObject(_clean_id(object_id), HullTracker())
+            current_hull = known_objects[object_id].hull
 
         if current_hull and line.strip().lower().startswith("g"):
             command, params = parse_gcode(line)
             if "E" in params and "X" in params and "Y" in params:
                 x = float(params["X"])
                 y = float(params["Y"])
-                current_hull.add_point((x, y))
+                current_hull.add_point(Point(x, y))
 
     infile.seek(0)
 
@@ -237,10 +251,10 @@ def preprocess_slicer(infile):
                 )
 
         if line.startswith("; printing object "):
-            yield from object_start_marker(known_objects[line.split("printing object")[1].strip()])
+            yield from object_start_marker(known_objects[line.split("printing object")[1].strip()].name)
 
         if line.startswith("; stop printing object "):
-            yield from object_end_marker(known_objects[line.split("printing object")[1].strip()])
+            yield from object_end_marker(known_objects[line.split("printing object")[1].strip()].name)
 
 
 def preprocess_ideamaker(infile):
@@ -249,7 +263,7 @@ def preprocess_ideamaker(infile):
     #   ;PRINTING: test_bed_part0.3mf
     #   ;PRINTING_ID: 0
 
-    known_objects: Dict[str, Tuple[str, HullTracker]] = {}
+    known_objects: Dict[str, KnownObject] = {}
     current_hull: HullTracker = None
 
     for line in infile:
@@ -262,18 +276,19 @@ def preprocess_ideamaker(infile):
             if id == "-1":
                 continue
             if id not in known_objects:
-                known_objects[id] = (name, HullTracker())
-            current_hull = known_objects[id][1]
+                known_objects[id] = KnownObject(_clean_id(name), HullTracker())
+            current_hull = known_objects[id].hull
 
         if current_hull and line.strip().lower().startswith("g"):
             command, params = parse_gcode(line)
             if "E" in params and "X" in params and "Y" in params:
                 x = float(params["X"])
                 y = float(params["Y"])
-                current_hull.add_point((x, y))
+                current_hull.add_point(Point(x, y))
 
     infile.seek(0)
 
+    current_object: Optional[KnownObject] = None
     for line in infile:
         yield line
 
@@ -283,21 +298,27 @@ def preprocess_ideamaker(infile):
             yield from header(total_num)
             for id, (name, hull) in known_objects.items():
                 yield from define_object(
-                    f"1_{_clean_id(name)}",
+                    name,
                     center=hull.center(),
                     polygon=hull.exterior(),
                 )
 
-        current_object = None
         if line.startswith(";PRINTING_ID:"):
             printing_id = line.split(":")[1].strip()
             if current_object:
-                yield from object_end_marker(current_object)
+                yield from object_end_marker(current_object.name)
                 current_object = None
             if printing_id == "-1":
                 continue
             current_object = known_objects[printing_id]
-            yield from object_start_marker(current_object)
+            yield from object_start_marker(current_object.name)
+
+        if line == ";REMAINING_TIME: 0\n" and current_object:
+            yield from object_end_marker(current_object.name)
+            current_object = None
+
+    if current_object:
+        yield from object_end_marker(current_object.name)
 
 
 # Note:
@@ -367,7 +388,8 @@ if __name__ == "__main__":
                 res = preprocessor(fin, fout)
 
         if res:
-            filepath.unlink()
+            if outfilepath.exists():
+                outfilepath.unlink()
             tempfilepath.rename(outfilepath)
         else:
             tempfilepath.unlink()
