@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-      
+      - uses: actions/setup-python@v1
       - name: Poetry Install
         uses: knowsuchagency/poetry-install@v2
 
