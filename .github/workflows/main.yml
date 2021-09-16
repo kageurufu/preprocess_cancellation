@@ -20,7 +20,7 @@ jobs:
         uses: knowsuchagency/poetry-install@v2
 
       - name: Run the build process
-        run: poetry run pyinstaller --onefile
+        run: poetry run pyinstaller --onefile preprocessor.py
 
       - name: Archive production artifacts
         uses: actions/upload-artifact@v2
