@@ -1,0 +1,29 @@
+name: Build binaries for prereleases
+
+on:
+  push:
+    branches: [ main ]
+    
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Poetry Install
+        uses: knowsuchagency/poetry-install@v2
+
+      - name: Run the build process
+        run: poetry run pyinstaller --onefile
+
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          path: |
+            dist
