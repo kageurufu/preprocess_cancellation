@@ -2,7 +2,7 @@ from preprocessor import preprocess_superslicer, preprocess_cura, preprocess_ide
 import pathlib
 
 
-gcode_path = pathlib.Path("../GCode")
+gcode_path = pathlib.Path("./GCode")
 
 
 def test_superslicer():
