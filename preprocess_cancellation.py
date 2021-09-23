@@ -309,6 +309,9 @@ def preprocess_slicer(infile):
                 known_objects[object_id] = KnownObject(_clean_id(object_id), HullTracker.create())
             current_hull = known_objects[object_id].hull
 
+        if line.startswith("; stop printing object "):
+            current_hull = None
+
         if current_hull and line.strip().lower().startswith("g"):
             command, params = parse_gcode(line)
             if "E" in params and "X" in params and "Y" in params:

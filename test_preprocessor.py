@@ -144,6 +144,8 @@ def test_prusaslicer():
     assert results.count(f"END_CURRENT_OBJECT NAME=union_3_id_2_copy_0") == 25
 
 
+
+
 def test_slic3r():
     with (gcode_path / "slic3r.gcode").open("r") as f:
         results = "".join(list(preprocess_slicer(f))).split("\n")
@@ -250,3 +252,25 @@ def test_ideamaker():
 
     assert results.count("START_CURRENT_OBJECT NAME=test_bed_part0_1_3mf") == 33
     assert results.count("END_CURRENT_OBJECT NAME=test_bed_part0_1_3mf") == 33
+
+def test_issue_1_prusaslicer_point_collection():
+    with (gcode_path / "prusaslicer-issue1.gcode").open("r") as f:
+        results = "".join(list(preprocess_slicer(f))).split("\n")
+
+    definitions = [r for r in results if r.startswith("DEFINE_OBJECT")]
+
+    assert (
+        "DEFINE_OBJECT NAME=Shape_Cylinder_id_1_copy_0 CENTER=154.928,108.320 POLYGON=[[155.012,94.688],[153.801,94.741],[152.362,94.943],[151.141,95.238],[149.812,95.698],[148.495,96.312],[147.318,97.015],[146.278,97.78],[145.199,98.752],[144.247,99.806],[143.437,100.909],[142.759,102.049],[142.145,103.365],[141.675,104.728],[141.39,105.914],[141.189,107.337],[141.135,108.562],[141.202,109.923],[141.39,111.211],[141.672,112.387],[142.145,113.761],[142.759,115.077],[143.468,116.263],[144.227,117.295],[145.199,118.374],[146.273,119.342],[147.251,120.066],[148.496,120.814],[149.774,121.412],[151.106,121.877],[152.362,122.183],[153.787,122.384],[155.009,122.438],[156.409,122.367],[157.658,122.183],[158.999,121.852],[160.208,121.427],[161.524,120.814],[162.707,120.107],[163.742,119.346],[164.821,118.374],[165.742,117.357],[166.513,116.322],[167.261,115.077],[167.863,113.79],[168.321,112.478],[168.63,111.211],[168.827,109.831],[168.885,108.564],[168.818,107.202],[168.63,105.914],[168.348,104.738],[167.875,103.365],[167.261,102.048],[166.548,100.856],[165.793,99.831],[164.821,98.752],[163.744,97.781],[162.77,97.06],[161.737,96.427],[160.431,95.79],[159.299,95.367],[157.895,94.991],[156.46,94.764],[155.012,94.688]]"
+        in definitions
+    )
+    assert (
+        "DEFINE_OBJECT NAME=Shape_Box_id_0_copy_0 CENTER=106.872,107.537 POLYGON=[[94.59,95.262],[94.59,119.812],[119.14,119.812],[119.14,95.262],[94.59,95.262]]"
+        in definitions
+    )
+
+    assert results.count(f"START_CURRENT_OBJECT NAME=Shape_Cylinder_id_1_copy_0") == 125
+    assert results.count(f"END_CURRENT_OBJECT NAME=Shape_Cylinder_id_1_copy_0") == 125
+
+    assert results.count(f"START_CURRENT_OBJECT NAME=Shape_Box_id_0_copy_0") == 125
+    assert results.count(f"END_CURRENT_OBJECT NAME=Shape_Box_id_0_copy_0") == 125
+
