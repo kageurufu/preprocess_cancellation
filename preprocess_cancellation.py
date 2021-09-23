@@ -23,14 +23,6 @@ except ImportError:
     shapely = None
 
 
-def sizeof_fmt(num, suffix="B"):
-    for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
-        if abs(num) < 1024.0:
-            return f"{num:3.1f}{unit}{suffix}"
-        num /= 1024.0
-    return f"{num:.1f}Yi{suffix}"
-
-
 HEADER_MARKER = "; Pre-Processed for Cancel-Object support\n"
 
 
@@ -496,6 +488,7 @@ def _main():
 
     args = argparser.parse_args()
     if args.disable_shapely:
+        global shapely
         shapely = None
 
     for filename in args.gcode:

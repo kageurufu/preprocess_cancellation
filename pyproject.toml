@@ -2,14 +2,14 @@
 line_length = 120
 
 [tool.pytest.ini_options]
-addopts = '-v --cov'
+addopts = '-v --cov=preprocess_cancellation'
 
 [tool.coverage.run]
-source = "./"
+branch = true
 
 [tool.poetry]
 name = "preprocess_cancellation"
-version = "0.1.1"
+version = "0.1.2"
 description = "GCode processor to add klipper cancel-object markers"
 authors = ["Franklyn Tackitt <im@frank.af>"]
 repository = "https://github.com/kageurufu/cancelobject-preprocessor"
@@ -26,7 +26,7 @@ shapely = "*"
 
 [tool.poetry.dev-dependencies]
 black = "*"
-coverage = "*"
+coverage = { version = "*", extras = ["toml"] }
 isort = "*"
 matplotlib = "*"
 pyinstaller = "*"
