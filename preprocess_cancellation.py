@@ -1,14 +1,40 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-
-from typing import Any, NamedTuple, Optional, List, Tuple, Set, Dict, TypedDict
-
 import argparse
 import json
+import logging
+import time
 import pathlib
 import re
+import shutil
+import statistics
 import sys
 import tempfile
+from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple, TypeVar
+
+
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+logger = logging.getLogger("prepropress_cancellation")
+
+try:
+    import shapely.geometry
+except ImportError:
+    logger.info("Shapely not found, complex hulls disabled")
+    shapely = None
+
+
+def sizeof_fmt(num, suffix="B"):
+    for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
+        if abs(num) < 1024.0:
+            return f"{num:3.1f}{unit}{suffix}"
+        num /= 1024.0
+    return f"{num:.1f}Yi{suffix}"
+
+
+HEADER_MARKER = "; Pre-Processed for Cancel-Object support\n"
+
+
+PathLike = TypeVar("PathLike", str, pathlib.Path)
 
 
 class Point(NamedTuple):
@@ -17,6 +43,64 @@ class Point(NamedTuple):
 
 
 class HullTracker:
+    def add_point(self, point: Point):
+        ...
+
+    def center(self) -> Point:
+        ...
+
+    def exterior(self) -> list[Point]:
+        ...
+
+    @classmethod
+    def create(cls):
+        if shapely:
+            return ShapelyHullTracker()
+        return SimpleHullTracker()
+
+
+class SimpleHullTracker(HullTracker):
+    def __init__(self) -> None:
+        self.xmin = 999999
+        self.ymin = 999999
+        self.xmax = -999999
+        self.ymax = -999999
+
+        self.count_points = 0
+        self.xsum = 0
+        self.ysum = 0
+
+    def add_point(self, point: Point):
+        self.xsum += point.x
+        self.ysum += point.y
+        self.count_points += 1
+
+        if point.x < self.xmin:
+            self.xmin = point.x
+        if point.y < self.ymin:
+            self.ymin = point.y
+        if point.x > self.xmax:
+            self.xmax = point.x
+        if point.y > self.ymax:
+            self.ymax = point.y
+
+    def center(self):
+        if not self.count_points:
+            return
+
+        return Point(
+            self.xsum / self.count_points,
+            self.ysum / self.count_points,
+        )
+
+    def exterior(self):
+        if not self.count_points:
+            return
+
+        return boundingbox((self.xmin, self.ymin), (self.xmax, self.ymax))
+
+
+class ShapelyHullTracker(HullTracker):
     def __init__(self):
         self.pos = None
         self.points: Set[Point] = set()
@@ -25,29 +109,23 @@ class HullTracker:
         self.points.add(point)
 
     def center(self):
-        if self.points:
-            x = sum(p[0] for p in self.points)
-            y = sum(p[1] for p in self.points)
-            return x / len(self.points), y / len(self.points)
+        if not self.points:
+            return
+
+        return Point(
+            statistics.mean(p[0] for p in self.points),
+            statistics.mean(p[1] for p in self.points),
+        )
 
     def exterior(self):
-        if self.points:
-            points = iter(self.points)
-            first = next(points)
-            min_x = max_x = first[0]
-            min_y = max_y = first[1]
+        if not self.points:
+            return
 
-            for (x, y) in points:
-                if x < min_x:
-                    min_x = x
-                if x > max_x:
-                    max_x = x
-                if y < min_y:
-                    min_y = y
-                if y > max_y:
-                    max_y = y
-
-            return boundingbox((min_x, min_y), (max_x, max_y))
+        return list(
+            shapely.geometry.MultiPoint(list(self.points))
+            .convex_hull.simplify(0.02, preserve_topology=False)
+            .exterior.coords
+        )
 
 
 class KnownObject(NamedTuple):
@@ -65,7 +143,7 @@ def boundingbox(pmin: Point, pmax: Point):
 
 
 def _dump_coords(coords: List[float]) -> str:
-    return ",".join(map(str, coords))
+    return ",".join(map("{:0.3f}".format, coords))
 
 
 def _clean_id(id):
@@ -80,7 +158,7 @@ def parse_gcode(line):
 
 def header(object_count):
     yield "\n\n"
-    yield "; Pre-Processed for Cancel-Object support\n"
+    yield HEADER_MARKER
     yield f"; {object_count} known objects\n"
 
 
@@ -108,6 +186,65 @@ def object_end_marker(object_name):
     yield f"END_CURRENT_OBJECT NAME={object_name}\n"
 
 
+def preprocess_pipe(infile):
+    yield from infile
+
+
+def preprocess_m486(infile):
+    known_objects: Dict[str, KnownObject] = {}
+    current_hull: Optional[HullTracker] = None
+
+    for line in infile:
+
+        if line.startswith("M486"):
+            _, params = parse_gcode(line)
+            if "T" in params:
+                for i in range(-1, int(params["T"])):
+                    known_objects[f"{i}"] = KnownObject(f"{i}", HullTracker.create())
+
+            elif "S" in params:
+                current_hull = known_objects[params["S"]].hull
+
+        if current_hull and line.strip().lower().startswith("g"):
+            _, params = parse_gcode(line)
+            if "E" in params and "X" in params and "Y" in params:
+                x = float(params["X"])
+                y = float(params["Y"])
+                current_hull.add_point(Point(x, y))
+
+    infile.seek(0)
+    current_object = None
+    for line in infile:
+        if line.upper().startswith("M486"):
+            _, params = parse_gcode(line)
+
+            if "T" in params:
+                # Inject custom marker
+                yield from header(len(known_objects))
+                for mesh_id, hull in known_objects.values():
+                    if mesh_id == "-1":
+                        continue
+
+                    yield from define_object(
+                        mesh_id,
+                        center=hull.center(),
+                        polygon=hull.exterior(),
+                    )
+
+            if "S" in params:
+                if current_object:
+                    yield from object_end_marker(current_object.name)
+                    current_object = None
+
+                if params["S"] != "-1":
+                    current_object = known_objects[params["S"]]
+                    yield from object_start_marker(current_object.name)
+
+            yield "; "  # Comment out the original M486 lines
+
+        yield line
+
+
 def preprocess_cura(infile):
     known_objects: Dict[str, KnownObject] = {}
     current_hull: Optional[HullTracker] = None
@@ -120,11 +257,11 @@ def preprocess_cura(infile):
             if object_name == "NONMESH":
                 continue
             if object_name not in known_objects:
-                known_objects[object_name] = KnownObject(_clean_id(object_name), HullTracker())
+                known_objects[object_name] = KnownObject(_clean_id(object_name), HullTracker.create())
             current_hull = known_objects[object_name].hull
 
         if current_hull and line.strip().lower().startswith("g"):
-            command, params = parse_gcode(line)
+            _, params = parse_gcode(line)
             if "E" in params and "X" in params and "Y" in params:
                 x = float(params["X"])
                 y = float(params["Y"])
@@ -170,55 +307,6 @@ def preprocess_cura(infile):
         yield from object_end_marker(current_object)
 
 
-def preprocess_superslicer(infile):
-    known_objects: Dict[str, Dict[str, Any]] = {}
-
-    for line in infile:
-        yield line
-
-        # ; object: {
-        #     "name": "cube_1",
-        #     "id": "cube_1 id:0 copy 0",
-        #     "object_center": [150.505357,155.500000,0.000000],
-        #     "boundingbox_center":[150.505357,155.500000,2.500000],
-        #     "boundingbox_size":[5.000000,5.000000,5.000000]
-        #   }
-
-        if line.startswith("; object:"):
-            object_data = json.loads(line.split(":", maxsplit=1)[1].strip())
-            object_data["clean_id"] = _clean_id(object_data["id"])
-            known_objects[object_data["id"]] = object_data
-
-        if line.startswith("; plater:"):
-            # Done. Header time
-            yield from header(len(known_objects))
-            for object_data in known_objects.values():
-                polygon = None
-                boundingbox_center = object_data.get("boundingbox_center", None)
-                boundingbox_size = object_data.get("boundingbox_size", None)
-                if boundingbox_center and boundingbox_size:
-                    [x, y, *_] = boundingbox_center
-                    [w, h, *_] = boundingbox_size
-                    polygon = boundingbox((x - w / 2, y - h / 2), (x + w / 2, y + h / 2))
-
-                yield from define_object(
-                    object_data["clean_id"],
-                    center=object_data.get("object_center"),
-                    polygon=polygon,
-                )
-
-            break
-
-    for line in infile:
-        yield line
-
-        if line.startswith("; printing object "):
-            yield from object_start_marker(known_objects[line.split("printing object")[1].strip()]["clean_id"])
-
-        if line.startswith("; stop printing object "):
-            yield from object_end_marker(known_objects[line.split("printing object")[1].strip()]["clean_id"])
-
-
 def preprocess_slicer(infile):
     known_objects: Dict[str, KnownObject] = {}
     current_hull: Optional[HullTracker] = None
@@ -226,7 +314,7 @@ def preprocess_slicer(infile):
         if line.startswith("; printing object "):
             object_id = line.split("printing object")[1].strip()
             if object_id not in known_objects:
-                known_objects[object_id] = KnownObject(_clean_id(object_id), HullTracker())
+                known_objects[object_id] = KnownObject(_clean_id(object_id), HullTracker.create())
             current_hull = known_objects[object_id].hull
 
         if current_hull and line.strip().lower().startswith("g"):
@@ -237,7 +325,6 @@ def preprocess_slicer(infile):
                 current_hull.add_point(Point(x, y))
 
     infile.seek(0)
-
     for line in infile:
         yield line
 
@@ -276,7 +363,7 @@ def preprocess_ideamaker(infile):
             if id == "-1":
                 continue
             if id not in known_objects:
-                known_objects[id] = KnownObject(_clean_id(name), HullTracker())
+                known_objects[id] = KnownObject(_clean_id(name), HullTracker.create())
             current_hull = known_objects[id].hull
 
         if current_hull and line.strip().lower().startswith("g"):
@@ -322,78 +409,100 @@ def preprocess_ideamaker(infile):
 
 
 # Note:
-#   Slic3r does not output any markers into GCode
-#   Kisslicer does not output any markers into GCode
+#   Slic3r:     does not output any markers into GCode
+#   Kisslicer:  does not output any markers into GCode
+#   Kiri:Moto:  does not output any markers into GCode
+#   Simplify3D: I was unable to figure out multiple processes
 SLICERS: dict[str, Tuple[str, callable]] = {
-    "superslicer": ("; generated by SuperSlicer", preprocess_superslicer),
+    "superslicer": ("; generated by SuperSlicer", preprocess_slicer),
     "prusaslicer": ("; generated by PrusaSlicer", preprocess_slicer),
     "slic3r": ("; generated by Slic3r", preprocess_slicer),
     "cura": (";Generated with Cura_SteamEngine", preprocess_cura),
     "ideamaker": (";Sliced by ideaMaker", preprocess_ideamaker),
-    # "simplify3d": ("", preprocess_simplify3d),
 }
 
 
-def indentify_slicer_marker(line):
+def identify_slicer_marker(line):
     for name, (marker, processor) in SLICERS.items():
         if line.strip().startswith(marker):
-            print(f"Identified {name}")
+            logger.debug("Identified slicer %s", name)
             return processor
 
 
 def preprocessor(infile, outfile):
+    logger.debug("Identifying slicer")
+    found_m486 = False
+    processor = None
     for line in infile:
-        if not line.strip():
-            continue
+        if line.startswith("DEFINE_OBJECT"):
+            logger.info("GCode already supports cancellation")
+            infile.seek(0)
+            outfile.write(infile.read())
+            return True
 
-        if not line.startswith(";"):
-            print("Error, reached the end of the comments without finding a slicer marker")
-            return
+        if line.startswith("M486"):
+            if not found_m486:
+                logger.info("File has existing M486 markers, converting")
+            found_m486 = True
+            processor = preprocess_m486
 
-        processor = indentify_slicer_marker(line)
-        if processor:
-            break
+        if not processor:
+            processor = identify_slicer_marker(line)
 
     infile.seek(0)
-
     for line in processor(infile):
         outfile.write(line)
 
     return True
 
 
-argparser = argparse.ArgumentParser()
-argparser.add_argument(
-    "--output-suffix", "-o", help="Add a suffix to gcoode output. Without this, gcode will be rewritten in place"
-)
-# argparser.add_argument("--stdout", help="Write the processed gcode to stdout. Only works for a single input file")
-argparser.add_argument("gcode", nargs="*")
+def process_file_for_cancellation(filename: PathLike, output_suffix=None) -> int:
+    filepath = pathlib.Path(filename)
+    outfilepath = filepath
 
-if __name__ == "__main__":
+    if output_suffix:
+        outfilepath = outfilepath.with_name(outfilepath.stem + output_suffix + outfilepath.suffix)
+
+    tempfilepath = pathlib.Path(tempfile.mktemp())
+
+    with filepath.open("r") as fin:
+        with tempfilepath.open("w") as fout:
+            res = preprocessor(fin, fout)
+
+    if res:
+        if outfilepath.exists():
+            outfilepath.unlink()
+        shutil.move(tempfilepath, outfilepath)
+
+    else:
+        tempfilepath.unlink()
+
+    return res
+
+
+def _main():
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument(
+        "--output-suffix",
+        "-o",
+        help="Add a suffix to gcoode output. Without this, gcode will be rewritten in place",
+    )
+    argparser.add_argument(
+        "--disable-shapely", help="Disable using shapely to generate a hull polygon for objects", action="store_true"
+    )
+    argparser.add_argument("gcode", nargs="*")
+
     exitcode = 0
 
     args = argparser.parse_args()
+    if args.disable_shapely:
+        shapely = None
 
     for filename in args.gcode:
-        filepath = pathlib.Path(filename)
-        outfilepath = filepath
-
-        if args.output_suffix:
-            outfilepath = outfilepath.with_name(outfilepath.stem + args.output_suffix + outfilepath.suffix)
-
-        tempfilepath = pathlib.Path(tempfile.mktemp())
-
-        with filepath.open("r") as fin:
-            with tempfilepath.open("w") as fout:
-                res = preprocessor(fin, fout)
-
-        if res:
-            if outfilepath.exists():
-                outfilepath.unlink()
-            tempfilepath.rename(outfilepath)
-        else:
-            tempfilepath.unlink()
-
+        if not process_file_for_cancellation(filename, args.output_suffix):
             exitcode = 1
 
     sys.exit(exitcode)
+
+if __name__ == "__main__":
+    _main()

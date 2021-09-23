@@ -23,12 +23,12 @@ jobs:
       - uses: knowsuchagency/poetry-install@v2
 
       - name: Run the build process
-        run: poetry run pyinstaller --onefile preprocessor.py
+        run: poetry run pyinstaller --onefile preprocess_cancellation.py
 
       - name: Archive production artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: preprocessor-${{ matrix.os }}
+          name: preprocess_cancellation-${{ matrix.os }}
           path: |
             dist
 
@@ -43,4 +43,4 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
          files: |
-           preprocessor-*
+           preprocess_cancellation-*
