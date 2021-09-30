@@ -5,6 +5,7 @@ import json
 import logging
 import time
 import pathlib
+import platform
 import re
 import shutil
 import statistics
@@ -16,11 +17,13 @@ from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple, TypeVar
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger("prepropress_cancellation")
 
+shapely = None
 try:
     import shapely.geometry
 except ImportError:
     logger.info("Shapely not found, complex hulls disabled")
-    shapely = None
+except OSError:
+    logger.exception("Failed to import shapely. Are you missing libgeos?")
 
 
 HEADER_MARKER = "; Pre-Processed for Cancel-Object support\n"

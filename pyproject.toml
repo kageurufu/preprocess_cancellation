@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "preprocess_cancellation"
-version = "0.1.3"
+version = "0.1.4"
 description = "GCode processor to add klipper cancel-object markers"
 authors = ["Franklyn Tackitt <im@frank.af>"]
 repository = "https://github.com/kageurufu/cancelobject-preprocessor"
