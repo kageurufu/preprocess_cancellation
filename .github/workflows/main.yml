@@ -7,7 +7,11 @@ jobs:
     steps:      
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v1
-      - uses: knowsuchagency/poetry-install@v2
+      - run: |
+          pip install -U pip poetry
+          poetry install
+        env:
+          POETRY_VIRTUALENVS_CREATE: false
       
       - name: Run Tests
         run: poetry run py.test
@@ -20,7 +24,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v1
-      - uses: knowsuchagency/poetry-install@v2
+      - run: |
+          pip install -U pip poetry
+          poetry install
+        env:
+          POETRY_VIRTUALENVS_CREATE: false
 
       - name: Run the build process
         run: poetry run pyinstaller --onefile preprocess_cancellation.py
