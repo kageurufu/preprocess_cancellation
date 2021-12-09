@@ -147,14 +147,14 @@ def _clean_id(id):
 
 def parse_gcode(line):
     # drop comments
-    line = line.split(';', maxsplit=1)[0]
+    line = line.split(";", maxsplit=1)[0]
     command, *params = line.strip().split()
     parsed = {}
     for param in params:
-        if '=' in param:
-            parsed.update(dict(zip(param.split('=', maxsplit=1))))
+        if "=" in param:
+            parsed.update(dict(zip(param.split("=", maxsplit=1))))
         else:
-            parsed.update({ param[0].upper(): param[1:] })
+            parsed.update({param[0].upper(): param[1:]})
     return command, parsed
 
 
@@ -509,6 +509,7 @@ def _main():
             exitcode = 1
 
     sys.exit(exitcode)
+
 
 if __name__ == "__main__":
     _main()
