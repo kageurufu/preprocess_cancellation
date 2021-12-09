@@ -146,9 +146,16 @@ def _clean_id(id):
 
 
 def parse_gcode(line):
+    # drop comments
+    line = line.split(';', maxsplit=1)[0]
     command, *params = line.strip().split()
-    params = {p[0].upper(): p[1:] for p in params}
-    return command, params
+    parsed = {}
+    for param in params:
+        if '=' in param:
+            parsed.update(dict(zip(param.split('=', maxsplit=1))))
+        else:
+            parsed.update({ param[0].upper(): param[1:] })
+    return command, parsed
 
 
 def header(object_count):
@@ -202,7 +209,7 @@ def preprocess_m486(infile):
 
         if current_hull and line.strip().lower().startswith("g"):
             _, params = parse_gcode(line)
-            if "E" in params and "X" in params and "Y" in params:
+            if float(params.get("E", -1)) > 0 and "X" in params and "Y" in params:
                 x = float(params["X"])
                 y = float(params["Y"])
                 current_hull.add_point(Point(x, y))
@@ -257,7 +264,7 @@ def preprocess_cura(infile):
 
         if current_hull and line.strip().lower().startswith("g"):
             _, params = parse_gcode(line)
-            if "E" in params and "X" in params and "Y" in params:
+            if float(params.get("E", -1)) > 0 and "X" in params and "Y" in params:
                 x = float(params["X"])
                 y = float(params["Y"])
                 current_hull.add_point(Point(x, y))
@@ -317,7 +324,7 @@ def preprocess_slicer(infile):
 
         if current_hull and line.strip().lower().startswith("g"):
             command, params = parse_gcode(line)
-            if "E" in params and "X" in params and "Y" in params:
+            if float(params.get("E", -1)) > 0 and "X" in params and "Y" in params:
                 x = float(params["X"])
                 y = float(params["Y"])
                 current_hull.add_point(Point(x, y))
@@ -366,7 +373,7 @@ def preprocess_ideamaker(infile):
 
         if current_hull and line.strip().lower().startswith("g"):
             command, params = parse_gcode(line)
-            if "E" in params and "X" in params and "Y" in params:
+            if float(params.get("E", -1)) > 0 and "X" in params and "Y" in params:
                 x = float(params["X"])
                 y = float(params["Y"])
                 current_hull.add_point(Point(x, y))
