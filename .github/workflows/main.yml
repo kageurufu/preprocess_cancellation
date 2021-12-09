@@ -6,6 +6,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:      
       - uses: actions/checkout@v2
+      - run: |
+          apt-get install -y libgeos-c1v5
       - uses: actions/setup-python@v1
         with: 
           python-version: '3.9.x'
