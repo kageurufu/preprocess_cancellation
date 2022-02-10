@@ -31,7 +31,7 @@ jobs:
         with: 
           python-version: '3.9.x'
       - run: |
-          pip install -U pip poetry
+          pip install --user -U pip poetry
           poetry install
         env:
           POETRY_VIRTUALENVS_CREATE: false
