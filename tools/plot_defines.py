@@ -2,6 +2,8 @@ import json
 import sys
 
 import matplotlib.pyplot
+import argparse
+
 
 for filename in sys.argv[1:]:
 
@@ -25,6 +27,6 @@ for filename in sys.argv[1:]:
             )[0]
             matplotlib.pyplot.plot(object["CENTER"][0], object["CENTER"][1], "-go", color=geom.get_color())
 
-        matplotlib.pyplot.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        matplotlib.pyplot.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         matplotlib.pyplot.tight_layout()
         matplotlib.pyplot.show()

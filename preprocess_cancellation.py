@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+
 import argparse
 import json
 import logging
-import time
 import pathlib
 import platform
 import re
@@ -11,8 +11,8 @@ import shutil
 import statistics
 import sys
 import tempfile
+import time
 from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple, TypeVar
-
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger("prepropress_cancellation")

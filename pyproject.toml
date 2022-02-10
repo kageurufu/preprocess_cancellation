@@ -17,7 +17,8 @@ preprocess_cancellation = 'preprocess_cancellation:_main'
 shapely = [ "shapely" ]
 
 [tool.poetry.dependencies]
-python = ">= 3.6.0"
+python = ">= 3.6.2"
+
 shapely = { version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]
@@ -28,6 +29,7 @@ matplotlib = "*"
 pyinstaller = "*"
 pytest = "*"
 pytest-cov = "*"
+shapely = "*"
 
 [tool.black]
 line_length = 120

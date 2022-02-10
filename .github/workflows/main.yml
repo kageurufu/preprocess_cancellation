@@ -13,7 +13,7 @@ jobs:
           python-version: '3.9.x'
       - run: |
           pip install -U pip poetry
-          poetry install
+          poetry install -E shapely
         env:
           POETRY_VIRTUALENVS_CREATE: false
       
