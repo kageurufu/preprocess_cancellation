@@ -17,8 +17,8 @@ The following slicers are supported:
 
 Download the provided binary for your platform, and place it in with in your slicer's folder.
 
-In your Print Settings, under Output Options, add `preprocessor.exe;` to the "Post-Processing Scripts".
-For mac or linux, you should just use `preprocessor;`
+In your Print Settings, under Output Options, add `preprocess_cancellation.exe;` to the 
+"Post-Processing Scripts". For mac or linux, you should just use `preprocess_cancellation;`
 
 Then, all generated gcode should be automatically processed and rewritten to support cancellation.
 
