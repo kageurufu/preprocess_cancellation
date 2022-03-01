@@ -39,13 +39,7 @@ a bounding box, a simplified outline, or another useful shape.
 The beginning and end markers for the gcode for a single object. When an object is excluded, 
 anything between these markers is ignored.
 
-`LIST_OBJECTS`
-`LIST_EXCLUDED_OBJECTS`
-`EXCLUDE_OBJECT NAME=<object name>`
-`REMOVE_ALL_EXCLUDED`
-
-These gcode are used by the user to locate objects, and control which are canceled. These 
-are mostly utility, to be functional without the need for a full frontend for the printer.
+For a full breakdown, see [the klipper G-Code Reference](https://www.klipper3d.org/G-Codes.html#excludeobject)
 
 ### Known Limitations
 

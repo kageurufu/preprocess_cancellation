@@ -12,7 +12,7 @@ import sys
 import tempfile
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypeVar
 
-__version__ = "0.1.7"
+__version__ = "0.2.0"
 
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
