@@ -1,11 +1,9 @@
-import re
 import pathlib
+import re
 import subprocess
 import sys
 
-
 from preprocess_cancellation import preprocess_cura, preprocess_ideamaker, preprocess_m486, preprocess_slicer
-
 
 gcode_path = pathlib.Path("./GCode")
 
@@ -13,10 +11,10 @@ gcode_path = pathlib.Path("./GCode")
 def collect_definitions(lines):
     definitions = set()
     for line in lines:
-        if line.startswith("DEFINE_OBJECT"):
+        if line.startswith("EXCLUDE_OBJECT_DEFINE"):
             definitions.add(line)
-            # Add just the `DEFINE_OBJECT NAME=...` as well, for quick checking without caring about coordinates
-            definitions.add(re.sub(r"^(DEFINE_OBJECT).*(NAME=\S+).*$", r"\1 \2", line))
+            # Add just the `EXCLUDE_OBJECT_DEFINE NAME=...` as well, for quick checking without caring about coordinates
+            definitions.add(re.sub(r"^(EXCLUDE_OBJECT_DEFINE).*(NAME=\S+).*$", r"\1 \2", line))
     return definitions
 
 
@@ -47,34 +45,22 @@ def test_m486():
 
     definitions = collect_definitions(results)
 
-    assert "DEFINE_OBJECT NAME=0" in definitions
-    assert "DEFINE_OBJECT NAME=1" in definitions
-    assert "DEFINE_OBJECT NAME=2" in definitions
-    assert "DEFINE_OBJECT NAME=3" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=1" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=2" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=3" in definitions
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=0") == 25
-    assert results.count(f"END_CURRENT_OBJECT NAME=0") == 25
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=0") == 25
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=0") == 25
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=1") == 25
-    assert results.count(f"END_CURRENT_OBJECT NAME=1") == 25
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=1") == 25
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=1") == 25
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=2") == 25
-    assert results.count(f"END_CURRENT_OBJECT NAME=2") == 25
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=2") == 25
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=2") == 25
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=3") == 25
-    assert results.count(f"END_CURRENT_OBJECT NAME=3") == 25
-
-
-def test_superslicer():
-    with (gcode_path / "superslicer.gcode").open("r") as f:
-        results = "".join(list(preprocess_slicer(f))).split("\n")
-
-    definitions = collect_definitions(results)
-
-    assert "DEFINE_OBJECT NAME=cube_1_id_0_copy_0" in definitions
-    assert "DEFINE_OBJECT NAME=cube_1_id_0_copy_1" in definitions
-    assert "DEFINE_OBJECT NAME=union_3_id_2_copy_0" in definitions
-    assert "DEFINE_OBJECT NAME=cylinder_2_id_1_copy_0" in definitions
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=3") == 25
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=3") == 25
 
 
 def test_superslicer():
@@ -83,10 +69,22 @@ def test_superslicer():
 
     definitions = collect_definitions(results)
 
-    assert "DEFINE_OBJECT NAME=cube_1_id_0_copy_0" in definitions
-    assert "DEFINE_OBJECT NAME=cube_1_id_0_copy_1" in definitions
-    assert "DEFINE_OBJECT NAME=union_3_id_2_copy_0" in definitions
-    assert "DEFINE_OBJECT NAME=cylinder_2_id_1_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_1" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=union_3_id_2_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cylinder_2_id_1_copy_0" in definitions
+
+
+def test_superslicer():
+    with (gcode_path / "superslicer.gcode").open("r") as f:
+        results = "".join(list(preprocess_slicer(f))).split("\n")
+
+    definitions = collect_definitions(results)
+
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_1" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=union_3_id_2_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cylinder_2_id_1_copy_0" in definitions
 
 
 def test_prusaslicer():
@@ -95,22 +93,22 @@ def test_prusaslicer():
 
     definitions = collect_definitions(results)
 
-    assert "DEFINE_OBJECT NAME=cylinder_2_id_1_copy_0" in definitions
-    assert "DEFINE_OBJECT NAME=cube_1_id_0_copy_0" in definitions
-    assert "DEFINE_OBJECT NAME=cube_1_id_0_copy_1" in definitions
-    assert "DEFINE_OBJECT NAME=union_3_id_2_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cylinder_2_id_1_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_1" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=union_3_id_2_copy_0" in definitions
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=cylinder_2_id_1_copy_0") == 25
-    assert results.count(f"END_CURRENT_OBJECT NAME=cylinder_2_id_1_copy_0") == 25
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=cylinder_2_id_1_copy_0") == 25
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=cylinder_2_id_1_copy_0") == 25
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=cube_1_id_0_copy_0") == 25
-    assert results.count(f"END_CURRENT_OBJECT NAME=cube_1_id_0_copy_0") == 25
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=cube_1_id_0_copy_0") == 25
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=cube_1_id_0_copy_0") == 25
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=cube_1_id_0_copy_1") == 25
-    assert results.count(f"END_CURRENT_OBJECT NAME=cube_1_id_0_copy_1") == 25
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=cube_1_id_0_copy_1") == 25
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=cube_1_id_0_copy_1") == 25
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=union_3_id_2_copy_0") == 25
-    assert results.count(f"END_CURRENT_OBJECT NAME=union_3_id_2_copy_0") == 25
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=union_3_id_2_copy_0") == 25
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=union_3_id_2_copy_0") == 25
 
 
 def test_slic3r():
@@ -119,22 +117,22 @@ def test_slic3r():
 
     definitions = collect_definitions(results)
 
-    assert "DEFINE_OBJECT NAME=cube_1_stl_id_0_copy_0" in definitions
-    assert "DEFINE_OBJECT NAME=cube_1_stl_id_0_copy_1" in definitions
-    assert "DEFINE_OBJECT NAME=cylinder_2_stl_id_1_copy_0" in definitions
-    assert "DEFINE_OBJECT NAME=union_3_stl_id_2_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_stl_id_0_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_stl_id_0_copy_1" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cylinder_2_stl_id_1_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=union_3_stl_id_2_copy_0" in definitions
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=cube_1_stl_id_0_copy_0") == 16
-    assert results.count(f"END_CURRENT_OBJECT NAME=cube_1_stl_id_0_copy_0") == 16
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=cube_1_stl_id_0_copy_0") == 16
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=cube_1_stl_id_0_copy_0") == 16
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=cube_1_stl_id_0_copy_1") == 16
-    assert results.count(f"END_CURRENT_OBJECT NAME=cube_1_stl_id_0_copy_1") == 16
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=cube_1_stl_id_0_copy_1") == 16
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=cube_1_stl_id_0_copy_1") == 16
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=cylinder_2_stl_id_1_copy_0") == 16
-    assert results.count(f"END_CURRENT_OBJECT NAME=cylinder_2_stl_id_1_copy_0") == 16
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=cylinder_2_stl_id_1_copy_0") == 16
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=cylinder_2_stl_id_1_copy_0") == 16
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=union_3_stl_id_2_copy_0") == 16
-    assert results.count(f"END_CURRENT_OBJECT NAME=union_3_stl_id_2_copy_0") == 16
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=union_3_stl_id_2_copy_0") == 16
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=union_3_stl_id_2_copy_0") == 16
 
 
 def test_cura():
@@ -143,22 +141,22 @@ def test_cura():
 
     definitions = collect_definitions(results)
 
-    assert "DEFINE_OBJECT NAME=cylinder_2_stl" in definitions
-    assert "DEFINE_OBJECT NAME=cube_1_stl" in definitions
-    assert "DEFINE_OBJECT NAME=union_3_stl" in definitions
-    assert "DEFINE_OBJECT NAME=cube_1_stl_1" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cylinder_2_stl" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_stl" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=union_3_stl" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_stl_1" in definitions
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=cylinder_2_stl") == 25
-    assert results.count(f"END_CURRENT_OBJECT NAME=cylinder_2_stl") == 25
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=cylinder_2_stl") == 25
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=cylinder_2_stl") == 25
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=cube_1_stl") == 25
-    assert results.count(f"END_CURRENT_OBJECT NAME=cube_1_stl") == 25
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=cube_1_stl") == 25
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=cube_1_stl") == 25
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=union_3_stl") == 25
-    assert results.count(f"END_CURRENT_OBJECT NAME=union_3_stl") == 25
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=union_3_stl") == 25
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=union_3_stl") == 25
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=cube_1_stl_1") == 25
-    assert results.count(f"END_CURRENT_OBJECT NAME=cube_1_stl_1") == 25
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=cube_1_stl_1") == 25
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=cube_1_stl_1") == 25
 
 
 def test_ideamaker():
@@ -167,22 +165,22 @@ def test_ideamaker():
 
     definitions = collect_definitions(results)
 
-    assert "DEFINE_OBJECT NAME=test_bed_part1_3mf" in definitions
-    assert "DEFINE_OBJECT NAME=test_bed_part2_3mf" in definitions
-    assert "DEFINE_OBJECT NAME=test_bed_part0_3mf" in definitions
-    assert "DEFINE_OBJECT NAME=test_bed_part0_1_3mf" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part1_3mf" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part2_3mf" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part0_3mf" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part0_1_3mf" in definitions
 
-    assert results.count("START_CURRENT_OBJECT NAME=test_bed_part1_3mf") == 32
-    assert results.count("END_CURRENT_OBJECT NAME=test_bed_part1_3mf") == 32
+    assert results.count("EXCLUDE_OBJECT_START NAME=test_bed_part1_3mf") == 32
+    assert results.count("EXCLUDE_OBJECT_END NAME=test_bed_part1_3mf") == 32
 
-    assert results.count("START_CURRENT_OBJECT NAME=test_bed_part2_3mf") == 32
-    assert results.count("END_CURRENT_OBJECT NAME=test_bed_part2_3mf") == 32
+    assert results.count("EXCLUDE_OBJECT_START NAME=test_bed_part2_3mf") == 32
+    assert results.count("EXCLUDE_OBJECT_END NAME=test_bed_part2_3mf") == 32
 
-    assert results.count("START_CURRENT_OBJECT NAME=test_bed_part0_3mf") == 33
-    assert results.count("END_CURRENT_OBJECT NAME=test_bed_part0_3mf") == 33
+    assert results.count("EXCLUDE_OBJECT_START NAME=test_bed_part0_3mf") == 33
+    assert results.count("EXCLUDE_OBJECT_END NAME=test_bed_part0_3mf") == 33
 
-    assert results.count("START_CURRENT_OBJECT NAME=test_bed_part0_1_3mf") == 33
-    assert results.count("END_CURRENT_OBJECT NAME=test_bed_part0_1_3mf") == 33
+    assert results.count("EXCLUDE_OBJECT_START NAME=test_bed_part0_1_3mf") == 33
+    assert results.count("EXCLUDE_OBJECT_END NAME=test_bed_part0_1_3mf") == 33
 
 
 def test_issue_1_prusaslicer_point_collection():
@@ -191,11 +189,11 @@ def test_issue_1_prusaslicer_point_collection():
 
     definitions = collect_definitions(results)
 
-    assert "DEFINE_OBJECT NAME=Shape_Cylinder_id_1_copy_0" in definitions
-    assert "DEFINE_OBJECT NAME=Shape_Box_id_0_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=Shape_Cylinder_id_1_copy_0" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=Shape_Box_id_0_copy_0" in definitions
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=Shape_Cylinder_id_1_copy_0") == 125
-    assert results.count(f"END_CURRENT_OBJECT NAME=Shape_Cylinder_id_1_copy_0") == 125
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=Shape_Cylinder_id_1_copy_0") == 125
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=Shape_Cylinder_id_1_copy_0") == 125
 
-    assert results.count(f"START_CURRENT_OBJECT NAME=Shape_Box_id_0_copy_0") == 125
-    assert results.count(f"END_CURRENT_OBJECT NAME=Shape_Box_id_0_copy_0") == 125
+    assert results.count(f"EXCLUDE_OBJECT_START NAME=Shape_Box_id_0_copy_0") == 125
+    assert results.count(f"EXCLUDE_OBJECT_END NAME=Shape_Box_id_0_copy_0") == 125

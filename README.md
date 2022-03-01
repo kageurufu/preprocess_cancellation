@@ -27,14 +27,14 @@ Then, all generated gcode should be automatically processed and rewritten to sup
 There are 3 gcodes inserted in the files automatically, and 4 more used to control the 
 object cancellation.
 
-`DEFINE_OBJECT NAME=<object name> [CENTER=x,y] [POLYGON=[[x,y],...]]`
+`EXCLUDE_OBJECT_DEFINE NAME=<object name> [CENTER=x,y] [POLYGON=[[x,y],...]]`
 
 The NAME must be unique and consistent throughout the file. CENTER is the center location 
 for the mesh, used to show on interfaces where and object being canceled is on the bed. 
 POLYGON is a series of points, used to represent the bounds of the object. It can be just 
 a bounding box, a simplified outline, or another useful shape.
 
-`START_CURRENT_OBJECT NAME=<object name>` and `END_CURRENT_OBJECT [NAME=<object name>]`
+`EXCLUDE_OBJECT_START NAME=<object name>` and `EXCLUDE_OBJECT_END [NAME=<object name>]`
 
 The beginning and end markers for the gcode for a single object. When an object is excluded, 
 anything between these markers is ignored.
@@ -60,6 +60,6 @@ so canceling a mesh cancels it's support as well.
 This looks for known markers inside the GCode, specific to each slicer. It uses those
 to figure out the printing object's name, and track's all extrusion moves within it's 
 print movements. Those are used to calculate a minimal bounding box for each mesh. 
-A series of `DEFINE_OBJECT` gcodes are placed in a header, including the bounding boxes
-and objects centers. Then, these markers are used to place `START_CURRENT_OBJECT` and 
-`END_CURRENT_OBJECT` gcodes in the file surrounding each set of extrusions for that object.
+A series of `EXCLUDE_OBJECT_DEFINE` gcodes are placed in a header, including the bounding boxes
+and objects centers. Then, these markers are used to place `EXCLUDE_OBJECT_START` and 
+`EXCLUDE_OBJECT_END` gcodes in the file surrounding each set of extrusions for that object.

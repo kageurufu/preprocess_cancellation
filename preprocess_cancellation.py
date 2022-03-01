@@ -170,7 +170,7 @@ def define_object(
     polygon: Optional[Point] = None,
     region: Optional[List[Point]] = None,
 ):
-    yield f"DEFINE_OBJECT NAME={name}"
+    yield f"EXCLUDE_OBJECT_DEFINE NAME={name}"
     if center:
         yield f" CENTER={_dump_coords(center)}"
     if polygon:
@@ -181,11 +181,11 @@ def define_object(
 
 
 def object_start_marker(object_name):
-    yield f"START_CURRENT_OBJECT NAME={object_name}\n"
+    yield f"EXCLUDE_OBJECT_START NAME={object_name}\n"
 
 
 def object_end_marker(object_name):
-    yield f"END_CURRENT_OBJECT NAME={object_name}\n"
+    yield f"EXCLUDE_OBJECT_END NAME={object_name}\n"
 
 
 def preprocess_pipe(infile):
@@ -443,7 +443,7 @@ def preprocessor(infile, outfile):
     found_m486 = False
     processor = None
     for line in infile:
-        if line.startswith("DEFINE_OBJECT"):
+        if line.startswith("EXCLUDE_OBJECT_DEFINE") or line.startswith("DEFINE_OBJECT"):
             logger.info("GCode already supports cancellation")
             infile.seek(0)
             outfile.write(infile.read())

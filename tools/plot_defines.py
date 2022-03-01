@@ -1,9 +1,8 @@
+import argparse
 import json
 import sys
 
 import matplotlib.pyplot
-import argparse
-
 
 for filename in sys.argv[1:]:
 
@@ -11,7 +10,7 @@ for filename in sys.argv[1:]:
 
         fig = matplotlib.pyplot.subplot()
         for line in file:
-            if not line.upper().startswith("DEFINE_OBJECT"):
+            if not line.upper().startswith("DEFINE_OBJECT") or line.upper().startswith("EXCLUDE_OBJECT_DEFINE"):
                 continue
 
             _, *params = line.split(" ")
