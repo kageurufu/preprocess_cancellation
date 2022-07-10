@@ -1,47 +1,63 @@
+import multiprocessing
 import pathlib
-import re
 import subprocess
 import sys
+import tempfile
 
-from preprocess_cancellation import preprocess_cura, preprocess_ideamaker, preprocess_m486, preprocess_slicer
+from preprocess_cancellation.layers import LayerFilter
+from preprocess_cancellation.slicers import (
+    preprocess_cura_to_klipper,
+    preprocess_ideamaker_to_klipper,
+    preprocess_m486_to_klipper,
+    preprocess_slicer_to_klipper,
+)
+from utils import collect_definitions
 
 gcode_path = pathlib.Path("./GCode")
 
 
-def collect_definitions(lines):
-    definitions = set()
-    for line in lines:
-        if line.startswith("EXCLUDE_OBJECT_DEFINE"):
-            definitions.add(line)
-            # Add just the `EXCLUDE_OBJECT_DEFINE NAME=...` as well, for quick checking without caring about coordinates
-            definitions.add(re.sub(r"^(EXCLUDE_OBJECT_DEFINE).*(NAME=\S+).*$", r"\1 \2", line))
-    return definitions
-
-
-def test_cli_without():
+def test_cli_without_shapely():
     """
     Ensure the preprocesor does not crash
     """
-    try:
-        command = [
-            sys.executable,
-            "./preprocess_cancellation.py",
-            "--disable-shapely",
-            "-o",
-            ".testing",
-            *gcode_path.glob("*.gcode"),
+    pool = multiprocessing.Pool()
+
+    pool = multiprocessing.Pool()
+    with tempfile.TemporaryDirectory() as tempdir:
+        assert not [
+            completed_proc
+            for completed_proc in pool.starmap(
+                subprocess.run,
+                [
+                    (
+                        [
+                            sys.executable,
+                            "-m",
+                            "preprocess_cancellation",
+                            "--disable-shapely",
+                            "--output-dir",
+                            tempdir,
+                            gcode,
+                        ],
+                    )
+                    for gcode in gcode_path.glob("*.gcode")
+                ],
+            )
+            if completed_proc.returncode != 0
         ]
-        with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
-            proc.wait()
-            assert proc.returncode == 0
-    finally:
-        for testing_file in gcode_path.glob("*.testing.gcode"):
-            testing_file.unlink()
 
 
 def test_m486():
     with (gcode_path / "m486.gcode").open("r") as f:
-        results = "".join(list(preprocess_m486(f))).split("\n")
+        results = "".join(
+            list(
+                preprocess_m486_to_klipper(
+                    f,
+                    use_shapely=False,
+                    layer_filter=LayerFilter("*"),
+                )
+            )
+        ).split("\n")
 
     definitions = collect_definitions(results)
 
@@ -65,7 +81,15 @@ def test_m486():
 
 def test_superslicer():
     with (gcode_path / "superslicer.gcode").open("r") as f:
-        results = "".join(list(preprocess_slicer(f))).split("\n")
+        results = "".join(
+            list(
+                preprocess_slicer_to_klipper(
+                    f,
+                    use_shapely=False,
+                    layer_filter=LayerFilter("*"),
+                )
+            )
+        ).split("\n")
 
     definitions = collect_definitions(results)
 
@@ -77,7 +101,15 @@ def test_superslicer():
 
 def test_superslicer():
     with (gcode_path / "superslicer.gcode").open("r") as f:
-        results = "".join(list(preprocess_slicer(f))).split("\n")
+        results = "".join(
+            list(
+                preprocess_slicer_to_klipper(
+                    f,
+                    use_shapely=False,
+                    layer_filter=LayerFilter("*"),
+                )
+            )
+        ).split("\n")
 
     definitions = collect_definitions(results)
 
@@ -89,7 +121,15 @@ def test_superslicer():
 
 def test_prusaslicer():
     with (gcode_path / "prusaslicer.gcode").open("r") as f:
-        results = "".join(list(preprocess_slicer(f))).split("\n")
+        results = "".join(
+            list(
+                preprocess_slicer_to_klipper(
+                    f,
+                    use_shapely=False,
+                    layer_filter=LayerFilter("*"),
+                )
+            )
+        ).split("\n")
 
     definitions = collect_definitions(results)
 
@@ -113,7 +153,15 @@ def test_prusaslicer():
 
 def test_slic3r():
     with (gcode_path / "slic3r.gcode").open("r") as f:
-        results = "".join(list(preprocess_slicer(f))).split("\n")
+        results = "".join(
+            list(
+                preprocess_slicer_to_klipper(
+                    f,
+                    use_shapely=False,
+                    layer_filter=LayerFilter("*"),
+                )
+            )
+        ).split("\n")
 
     definitions = collect_definitions(results)
 
@@ -137,7 +185,15 @@ def test_slic3r():
 
 def test_cura():
     with (gcode_path / "cura.gcode").open("r") as f:
-        results = "".join(list(preprocess_cura(f))).split("\n")
+        results = "".join(
+            list(
+                preprocess_cura_to_klipper(
+                    f,
+                    use_shapely=False,
+                    layer_filter=LayerFilter("*"),
+                )
+            )
+        ).split("\n")
 
     definitions = collect_definitions(results)
 
@@ -161,7 +217,15 @@ def test_cura():
 
 def test_ideamaker():
     with (gcode_path / "ideamaker.gcode").open("r") as f:
-        results = "".join(list(preprocess_ideamaker(f))).split("\n")
+        results = "".join(
+            list(
+                preprocess_ideamaker_to_klipper(
+                    f,
+                    use_shapely=False,
+                    layer_filter=LayerFilter("*"),
+                )
+            )
+        ).split("\n")
 
     definitions = collect_definitions(results)
 
@@ -185,7 +249,15 @@ def test_ideamaker():
 
 def test_issue_1_prusaslicer_point_collection():
     with (gcode_path / "prusaslicer-issue1.gcode").open("r") as f:
-        results = "".join(list(preprocess_slicer(f))).split("\n")
+        results = "".join(
+            list(
+                preprocess_slicer_to_klipper(
+                    f,
+                    use_shapely=False,
+                    layer_filter=LayerFilter("*"),
+                )
+            )
+        ).split("\n")
 
     definitions = collect_definitions(results)
 
