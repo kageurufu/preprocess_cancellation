@@ -1,17 +1,28 @@
-from typing import Dict, Optional
+import io
+from typing import Dict, Generator, Optional
 
 from preprocess_cancellation.layers import LayerFilter
 
-from ..gcode import exclude_object_define, exclude_object_end, exclude_object_header, exclude_object_start, parse_gcode
+from ..gcode import (
+    exclude_object_end,
+    exclude_object_header,
+    exclude_object_start,
+    parse_gcode,
+)
 from ..hulls import HullTracker
 from ..types import KnownObject, Point
 from ..utils import clean_id
 
 
-def preprocess_cura_to_klipper(infile, *, use_shapely=True, layer_filter: LayerFilter):
+def preprocess_cura_to_klipper(
+    infile: io.TextIOBase,
+    *,
+    use_shapely: bool = True,
+    layer_filter: LayerFilter,
+) -> Generator[str, None, None]:
     known_objects: Dict[str, KnownObject] = {}
     current_object: Optional[KnownObject] = None
-    last_time_elapsed: str = None
+    last_time_elapsed: Optional[str] = None
 
     # iterate the file twice, to be able to inject the header markers
     for line in infile:
@@ -47,9 +58,7 @@ def preprocess_cura_to_klipper(infile, *, use_shapely=True, layer_filter: LayerF
             break
 
     # Inject custom marker
-    yield from exclude_object_header(len(known_objects))
-    for known_object in known_objects.values():
-        yield from exclude_object_define(known_object)
+    yield from exclude_object_header(known_objects.values())
 
     current_object = None
     for line in infile:

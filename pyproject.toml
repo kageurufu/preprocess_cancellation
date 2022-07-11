@@ -4,12 +4,25 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "preprocess_cancellation"
-version = "0.3.0"
+version = "0.3.a1"
 description = "GCode processor to add klipper exclude-object markers"
 readme = "README.md"
 authors = ["Franklyn Tackitt <im@frank.af>"]
 repository = "https://github.com/kageurufu/preprocess_cancellation"
 license = "GPL-3.0-only"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Environment :: Console",
+    "Operating System :: POSIX",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+]
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/kageurufu/preprocess_cancellation/issues"
@@ -21,7 +34,7 @@ preprocess_cancellation = "preprocess_cancellation.cli:main"
 shapely = ["shapely", "numpy"]
 
 [tool.poetry.dependencies]
-python = ">= 3.6.2"
+python = ">= 3.7.0, < 4.0"
 shapely = { version = "*", optional = true }
 numpy = [
     { version = "~1.21.6", python = "~3.7", optional = true },
@@ -38,15 +51,39 @@ pytest-cov = "*"
 tox = "*"
 shapely = "*"
 matplotlib = "*"
-
-[tool.black]
-line_length = 120
-
-[tool.isort]
-profile = "black"
+pre-commit = "*"
+mypy = "^0.961"
+pylint = { version = "*", python = ">=3.7.2,<4.0" }
 
 [tool.pytest.ini_options]
 addopts = "-v --cov=preprocess_cancellation"
 
 [tool.coverage.run]
 branch = true
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line_length = 120
+target-version = ["py37", "py38", "py39", "py310", "py311"]
+
+[tool.pylint."MESSAGES CONTROL"]
+max-line-length = 120
+variable-rgx = "([a-z_][a-z0-9_]{2,30}|[fxyze])$"
+disable = [
+    "inconsistent-return-statements",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "missing-module-docstring",
+    "too-many-branches",
+    "too-many-locals",
+]
+
+[[tool.mypy.overrides]]
+module = ["shapely.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["matplotlib.*"]
+ignore_missing_imports = true

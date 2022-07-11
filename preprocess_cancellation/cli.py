@@ -2,14 +2,17 @@ import argparse
 import contextlib
 import logging
 import sys
+from typing import Generator, NoReturn, TypeVar
 
 import preprocess_cancellation
 import preprocess_cancellation.__version__
 
+T = TypeVar("T")
+
 
 @contextlib.contextmanager
-def cid(x):
-    yield x
+def cid(obj: T) -> Generator[T, None, None]:
+    yield obj
 
 
 argparser = argparse.ArgumentParser(
@@ -84,7 +87,7 @@ with cid(argparser.add_argument_group("Shape Processing")) as shape_group:
 argparser.add_argument("gcode", nargs="*")
 
 
-def main():
+def main() -> NoReturn:
     args = argparser.parse_args()
 
     logging.basicConfig(

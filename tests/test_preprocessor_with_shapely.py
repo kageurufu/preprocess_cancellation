@@ -13,10 +13,9 @@ from preprocess_cancellation.slicers import (
     preprocess_m486_to_klipper,
     preprocess_slicer_to_klipper,
 )
-from utils import collect_definitions
 
 try:
-    import shapely
+    import shapely  # pylint: disable=unused-import
 except ImportError:
     pytest.skip("Requires shapely installed", allow_module_level=True)
 
@@ -28,29 +27,31 @@ def test_cli_with_shapely():
     """
     Ensure the preprocesor does not crash
     """
-    pool = multiprocessing.Pool()
-    with tempfile.TemporaryDirectory() as tempdir:
-        assert not [
-            completed_proc
-            for completed_proc in pool.starmap(
-                subprocess.run,
-                [
-                    (
-                        [
-                            sys.executable,
-                            "-m",
-                            "preprocess_cancellation",
-                            "--enable-shapely",
-                            "--output-dir",
-                            tempdir,
-                            gcode,
-                        ],
-                    )
-                    for gcode in gcode_path.glob("*.gcode")
-                ],
-            )
-            if completed_proc.returncode != 0
-        ]
+
+    with multiprocessing.Pool() as pool:
+        with tempfile.TemporaryDirectory() as tempdir:
+
+            assert not [
+                completed_proc
+                for completed_proc in pool.starmap(
+                    subprocess.run,
+                    [
+                        (
+                            [
+                                sys.executable,
+                                "-m",
+                                "preprocess_cancellation",
+                                "--enable-shapely",
+                                "--output-dir",
+                                tempdir,
+                                gcode,
+                            ],
+                        )
+                        for gcode in gcode_path.glob("*.gcode")
+                    ],
+                )
+                if completed_proc.returncode != 0
+            ]
 
 
 def test_m486():
@@ -71,17 +72,17 @@ def test_m486():
     assert "EXCLUDE_OBJECT_DEFINE NAME=2 " in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=3 " in output
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=0") == 25
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=0") == 25
+    assert results.count("EXCLUDE_OBJECT_START NAME=0") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=0") == 25
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=1") == 25
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=1") == 25
+    assert results.count("EXCLUDE_OBJECT_START NAME=1") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=1") == 25
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=2") == 25
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=2") == 25
+    assert results.count("EXCLUDE_OBJECT_START NAME=2") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=2") == 25
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=3") == 25
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=3") == 25
+    assert results.count("EXCLUDE_OBJECT_START NAME=3") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=3") == 25
 
 
 def test_superslicer():
@@ -95,7 +96,6 @@ def test_superslicer():
                 )
             )
         )
-        results = output.split("\n")
 
     assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_0" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_1" in output
@@ -121,17 +121,17 @@ def test_prusaslicer():
     assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_1 " in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=union_3_id_2_copy_0 " in output
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=cylinder_2_id_1_copy_0") == 25
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=cylinder_2_id_1_copy_0") == 25
+    assert results.count("EXCLUDE_OBJECT_START NAME=cylinder_2_id_1_copy_0") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=cylinder_2_id_1_copy_0") == 25
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=cube_1_id_0_copy_0") == 25
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=cube_1_id_0_copy_0") == 25
+    assert results.count("EXCLUDE_OBJECT_START NAME=cube_1_id_0_copy_0") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=cube_1_id_0_copy_0") == 25
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=cube_1_id_0_copy_1") == 25
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=cube_1_id_0_copy_1") == 25
+    assert results.count("EXCLUDE_OBJECT_START NAME=cube_1_id_0_copy_1") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=cube_1_id_0_copy_1") == 25
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=union_3_id_2_copy_0") == 25
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=union_3_id_2_copy_0") == 25
+    assert results.count("EXCLUDE_OBJECT_START NAME=union_3_id_2_copy_0") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=union_3_id_2_copy_0") == 25
 
 
 def test_slic3r():
@@ -152,17 +152,17 @@ def test_slic3r():
     assert "EXCLUDE_OBJECT_DEFINE NAME=cylinder_2_stl_id_1_copy_0" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=union_3_stl_id_2_copy_0" in output
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=cube_1_stl_id_0_copy_0") == 16
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=cube_1_stl_id_0_copy_0") == 16
+    assert results.count("EXCLUDE_OBJECT_START NAME=cube_1_stl_id_0_copy_0") == 16
+    assert results.count("EXCLUDE_OBJECT_END NAME=cube_1_stl_id_0_copy_0") == 16
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=cube_1_stl_id_0_copy_1") == 16
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=cube_1_stl_id_0_copy_1") == 16
+    assert results.count("EXCLUDE_OBJECT_START NAME=cube_1_stl_id_0_copy_1") == 16
+    assert results.count("EXCLUDE_OBJECT_END NAME=cube_1_stl_id_0_copy_1") == 16
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=cylinder_2_stl_id_1_copy_0") == 16
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=cylinder_2_stl_id_1_copy_0") == 16
+    assert results.count("EXCLUDE_OBJECT_START NAME=cylinder_2_stl_id_1_copy_0") == 16
+    assert results.count("EXCLUDE_OBJECT_END NAME=cylinder_2_stl_id_1_copy_0") == 16
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=union_3_stl_id_2_copy_0") == 16
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=union_3_stl_id_2_copy_0") == 16
+    assert results.count("EXCLUDE_OBJECT_START NAME=union_3_stl_id_2_copy_0") == 16
+    assert results.count("EXCLUDE_OBJECT_END NAME=union_3_stl_id_2_copy_0") == 16
 
 
 def test_cura():
@@ -178,24 +178,22 @@ def test_cura():
         )
         results = output.split("\n")
 
-    definitions = collect_definitions(results)
-
     assert "EXCLUDE_OBJECT_DEFINE NAME=cylinder_2_stl" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_stl" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=union_3_stl" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_stl_1" in output
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=cylinder_2_stl") == 25
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=cylinder_2_stl") == 25
+    assert results.count("EXCLUDE_OBJECT_START NAME=cylinder_2_stl") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=cylinder_2_stl") == 25
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=cube_1_stl") == 25
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=cube_1_stl") == 25
+    assert results.count("EXCLUDE_OBJECT_START NAME=cube_1_stl") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=cube_1_stl") == 25
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=union_3_stl") == 25
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=union_3_stl") == 25
+    assert results.count("EXCLUDE_OBJECT_START NAME=union_3_stl") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=union_3_stl") == 25
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=cube_1_stl_1") == 25
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=cube_1_stl_1") == 25
+    assert results.count("EXCLUDE_OBJECT_START NAME=cube_1_stl_1") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=cube_1_stl_1") == 25
 
 
 def test_ideamaker():
@@ -211,10 +209,10 @@ def test_ideamaker():
         )
         results = output.split("\n")
 
-    assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part1_3mf" in output
-    assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part2_3mf" in output
-    assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part0_3mf" in output
-    assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part0_1_3mf" in output
+    assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part1_3m" in output
+    assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part2_3m" in output
+    assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part0_3m" in output
+    assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part0_1_3m" in output
 
     assert results.count("EXCLUDE_OBJECT_START NAME=test_bed_part1_3mf") == 32
     assert results.count("EXCLUDE_OBJECT_END NAME=test_bed_part1_3mf") == 32
@@ -245,15 +243,14 @@ def test_issue_1_prusaslicer_point_collection():
     assert "EXCLUDE_OBJECT_DEFINE NAME=Shape_Cylinder_id_1_copy_0" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=Shape_Box_id_0_copy_0" in output
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=Shape_Cylinder_id_1_copy_0") == 125
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=Shape_Cylinder_id_1_copy_0") == 125
+    assert results.count("EXCLUDE_OBJECT_START NAME=Shape_Cylinder_id_1_copy_0") == 125
+    assert results.count("EXCLUDE_OBJECT_END NAME=Shape_Cylinder_id_1_copy_0") == 125
 
-    assert results.count(f"EXCLUDE_OBJECT_START NAME=Shape_Box_id_0_copy_0") == 125
-    assert results.count(f"EXCLUDE_OBJECT_END NAME=Shape_Box_id_0_copy_0") == 125
+    assert results.count("EXCLUDE_OBJECT_START NAME=Shape_Box_id_0_copy_0") == 125
+    assert results.count("EXCLUDE_OBJECT_END NAME=Shape_Box_id_0_copy_0") == 125
 
 
 def test_issue_2_retractions_included_in_bounding_boxes():
-    # TODO: Add more specific retraction tests
     with (gcode_path / "regressions" / "issue_2_retractions.gcode").open("r") as f:
         output = "".join(
             list(
@@ -264,7 +261,6 @@ def test_issue_2_retractions_included_in_bounding_boxes():
                 )
             )
         )
-        results = output.split("\n")
 
     assert "EXCLUDE_OBJECT_DEFINE NAME=Leaf_stl_id_0_copy_0" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=Leaf_stl_id_1_copy_0" in output

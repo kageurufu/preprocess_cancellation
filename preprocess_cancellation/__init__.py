@@ -2,7 +2,7 @@
 """
 Preprocess G-Code files to inject support for Klipper's EXCLUDE_OBJECT feature.
 
-Current supported slicers: 
+Current supported slicers:
   * Cura
   * Slic3r beta
   * PrusaSlicer
@@ -11,15 +11,16 @@ Current supported slicers:
   * GCode with Marlin M486 tags
 """
 
+import io
 import logging
 import os
 import pathlib
 import shutil
 import tempfile
-from typing import TypeVar
+from typing import Any, Callable, Generator, Optional, TypeVar
 
 from .layers import LayerFilter
-from .slicers import identify_slicer_marker
+from .slicers import Preprocessor, identify_slicer_marker
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +28,21 @@ logger = logging.getLogger(__name__)
 PathLike = TypeVar("PathLike", str, pathlib.Path)
 
 
-def preprocess_pipe(infile, **_kw):
+def preprocess_pipe(infile: io.TextIOBase, **_kw: Any) -> Generator[str, None, None]:
     yield from infile
 
 
-def preprocess_stream(infile, outfile, *, layer_filter: LayerFilter, use_shapely=True):
+def preprocess_stream(
+    infile: io.TextIOBase,
+    outfile: io.TextIOBase,
+    *,
+    layer_filter: LayerFilter,
+    use_shapely: bool = True,
+) -> Optional[bool]:
     logger.debug("Identifying slicer")
-    processor = None
+
+    processor: Optional[Preprocessor] = None
+
     for line in infile:
         if line.startswith("EXCLUDE_OBJECT_DEFINE") or line.startswith("DEFINE_OBJECT"):
             logger.info("GCode already supports cancellation")
@@ -44,6 +53,9 @@ def preprocess_stream(infile, outfile, *, layer_filter: LayerFilter, use_shapely
         if not processor:
             processor = identify_slicer_marker(line)
 
+    if not processor:
+        raise ValueError("Could not identify slicer")
+
     infile.seek(0)
     for line in processor(infile, use_shapely=use_shapely, layer_filter=layer_filter):
         outfile.write(line)
@@ -52,8 +64,13 @@ def preprocess_stream(infile, outfile, *, layer_filter: LayerFilter, use_shapely
 
 
 def preprocess_file(
-    filename: PathLike, output_suffix=None, output_dir=None, *, use_shapely=True, layers: str = "*"
-) -> int:
+    filename: PathLike,
+    output_suffix: Optional[str] = None,
+    output_dir: Optional[str] = None,
+    *,
+    use_shapely: bool = True,
+    layers: str = "*",
+) -> bool:
     filepath = pathlib.Path(filename)
     outfilepath = filepath
 
@@ -68,8 +85,8 @@ def preprocess_file(
 
     layer_filter = LayerFilter(layers)
 
-    with filepath.open("r") as fin:
-        with tempfilepath.open("w") as fout:
+    with filepath.open("r", encoding="utf-8") as fin:
+        with tempfilepath.open("w", encoding="utf-8") as fout:
             res = preprocess_stream(fin, fout, use_shapely=use_shapely, layer_filter=layer_filter)
 
     if res:
@@ -80,4 +97,4 @@ def preprocess_file(
     else:
         tempfilepath.unlink()
 
-    return res
+    return bool(res)

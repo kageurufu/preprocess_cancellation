@@ -1,16 +1,27 @@
+import io
 import logging
-from typing import Dict, Optional
+from typing import Dict, Generator, Optional
 
 from preprocess_cancellation.layers import LayerFilter
 
-from ..gcode import exclude_object_define, exclude_object_end, exclude_object_header, exclude_object_start, parse_gcode
+from ..gcode import (
+    exclude_object_end,
+    exclude_object_header,
+    exclude_object_start,
+    parse_gcode,
+)
 from ..hulls import HullTracker
 from ..types import KnownObject, Point
 
 logger = logging.getLogger(__name__)
 
 
-def preprocess_m486_to_klipper(infile, *, use_shapely=True, layer_filter: LayerFilter):
+def preprocess_m486_to_klipper(
+    infile: io.TextIOBase,
+    *,
+    use_shapely: bool = True,
+    layer_filter: LayerFilter,
+) -> Generator[str, None, None]:
     known_objects: Dict[str, KnownObject] = {}
     current_object: Optional[KnownObject] = None
 
@@ -45,12 +56,9 @@ def preprocess_m486_to_klipper(infile, *, use_shapely=True, layer_filter: LayerF
 
             if "T" in params:
                 # Inject custom marker
-                yield from exclude_object_header(len(known_objects))
-                for known_object in known_objects.values():
-                    if known_object.name == "-1":
-                        continue
-
-                    yield from exclude_object_define(known_object)
+                yield from exclude_object_header(
+                    [known_object for known_object in known_objects.values() if known_object.name != "-1"]
+                )
 
             if "S" in params:
                 if current_object:

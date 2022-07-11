@@ -1,9 +1,15 @@
+import io
 import logging
-from typing import Dict, Optional
+from typing import Dict, Generator, Optional
 
 from preprocess_cancellation.layers import LayerFilter
 
-from ..gcode import exclude_object_define, exclude_object_end, exclude_object_header, exclude_object_start, parse_gcode
+from ..gcode import (
+    exclude_object_end,
+    exclude_object_header,
+    exclude_object_start,
+    parse_gcode,
+)
 from ..hulls import HullTracker
 from ..types import KnownObject, Point
 from ..utils import clean_id
@@ -11,7 +17,12 @@ from ..utils import clean_id
 logger = logging.getLogger(__name__)
 
 
-def preprocess_ideamaker_to_klipper(infile, *, use_shapely=True, layer_filter: LayerFilter):
+def preprocess_ideamaker_to_klipper(
+    infile: io.TextIOBase,
+    *,
+    use_shapely: bool = True,
+    layer_filter: LayerFilter,
+) -> Generator[str, None, None]:
     # This one is funnier
     # theres blocks like this, we can grab all these to get the names and ideamaker's IDs for them.
     #   ;PRINTING: test_bed_part0.3mf
@@ -23,18 +34,18 @@ def preprocess_ideamaker_to_klipper(infile, *, use_shapely=True, layer_filter: L
     for line in infile:
         if line.startswith(";PRINTING:"):
             name = line.split(":")[1].strip()
-            id_line = next(infile)
+            id_line = next(infile, "")
             assert id_line.startswith(";PRINTING_ID:")
-            id = id_line.split(":")[1].strip()
+            oid = id_line.split(":")[1].strip()
             # Ignore the internal non-object meshes
-            if id == "-1":
+            if oid == "-1":
                 continue
 
-            if id not in known_objects:
+            if oid not in known_objects:
                 logger.info("Found object %s", clean_id(name))
-                known_objects[id] = KnownObject(clean_id(name), HullTracker.create(use_shapely=use_shapely))
+                known_objects[oid] = KnownObject(clean_id(name), HullTracker.create(use_shapely=use_shapely))
 
-            current_object = known_objects[id]
+            current_object = known_objects[oid]
             current_object.layer += 1
 
         if current_object and layer_filter(current_object.layer) and line.strip().lower().startswith("g"):
@@ -54,9 +65,7 @@ def preprocess_ideamaker_to_klipper(infile, *, use_shapely=True, layer_filter: L
         if line.startswith(";TOTAL_NUM:"):
             total_num = int(line.split(":")[1].strip())
             assert total_num == len(known_objects)
-            yield from exclude_object_header(total_num)
-            for known_object in known_objects.values():
-                yield from exclude_object_define(known_object)
+            yield from exclude_object_header(known_objects.values())
 
         if line.startswith(";PRINTING_ID:"):
             printing_id = line.split(":")[1].strip()

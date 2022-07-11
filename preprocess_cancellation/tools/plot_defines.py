@@ -1,15 +1,23 @@
 import argparse
 import json
 import pathlib
-from typing import List
+from typing import List, TypedDict
 
 from matplotlib import pyplot
 
+from preprocess_cancellation.gcode import parse_gcode
 
-def main(filenames: List[pathlib.Path], *, save_fig: bool = False):
+
+class DefinedObject(TypedDict):
+    NAME: str
+    CENTER: List[float]
+    POLYGON: List[List[float]]
+
+
+def main(filenames: List[pathlib.Path], *, save_fig: bool = False) -> None:
     for filename in filenames:
         pyplot.clf()
-        with open(filename, "r") as file:
+        with open(filename, "r", encoding="utf-8") as file:
             pyplot.subplot(adjustable="box", aspect="1")
             pyplot.gcf().canvas.manager.set_window_title(filename)
 
@@ -17,18 +25,19 @@ def main(filenames: List[pathlib.Path], *, save_fig: bool = False):
                 if not (line.upper().startswith("DEFINE_OBJECT") or line.upper().startswith("EXCLUDE_OBJECT_DEFINE")):
                     continue
 
-                _, *params = line.split(" ")
-
-                object = {k.upper(): v for k, v in map(lambda s: s.split("=", maxsplit=1), params)}
-                object["CENTER"] = list(map(float, object["CENTER"].split(",")))
-                object["POLYGON"] = json.loads(object["POLYGON"])
+                _command, params = parse_gcode(line)
+                defined_object: DefinedObject = {
+                    "NAME": params["NAME"],
+                    "CENTER": [float(x) for x in params["CENTER"].split(",")],
+                    "POLYGON": json.loads(params["POLYGON"]),
+                }
 
                 geom = pyplot.plot(
-                    [point[0] for point in object["POLYGON"]],
-                    [point[1] for point in object["POLYGON"]],
-                    label=object["NAME"],
+                    [point[0] for point in defined_object["POLYGON"]],
+                    [point[1] for point in defined_object["POLYGON"]],
+                    label=defined_object["NAME"],
                 )[0]
-                pyplot.plot(object["CENTER"][0], object["CENTER"][1], "-o", color=geom.get_color())
+                pyplot.plot(defined_object["CENTER"][0], defined_object["CENTER"][1], "-o", color=geom.get_color())
 
             pyplot.legend(loc="lower center", bbox_to_anchor=(0.5, -0.25))
             pyplot.tight_layout()

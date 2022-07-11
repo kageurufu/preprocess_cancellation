@@ -33,11 +33,10 @@ def test_params(
 
     outbuf = io.StringIO()
 
-    preprocess_stream(gcode.open(), outbuf, use_shapely=use_shapely, layer_filter=LayerFilter(layers))
+    preprocess_stream(gcode.open(encoding="utf-8"), outbuf, use_shapely=use_shapely, layer_filter=LayerFilter(layers))
 
     outbuf.seek(0)
-    exclude_markers = [line for line in outbuf if line.startswith("EXCLUDE_OBJECT")]
-    definitions = [line for line in exclude_markers if line.startswith("EXCLUDE_OBJECT_DEFINE")]
+    definitions = [line for line in outbuf if line.startswith("EXCLUDE_OBJECT_DEFINE")]
 
     assert len(definitions) == 2, definitions
     for definition in definitions:

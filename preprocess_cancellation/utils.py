@@ -1,21 +1,21 @@
 import re
-from typing import List
+from typing import Iterable, List, Tuple
 
 from .types import Point
 
 
-def boundingbox(pmin: Point, pmax: Point):
+def boundingbox(pmin: Tuple[float, float], pmax: Tuple[float, float]) -> List[Point]:
     return [
-        (pmin[0], pmin[1]),
-        (pmin[0], pmax[1]),
-        (pmax[0], pmax[1]),
-        (pmax[0], pmin[1]),
+        Point(pmin[0], pmin[1]),
+        Point(pmin[0], pmax[1]),
+        Point(pmax[0], pmax[1]),
+        Point(pmax[0], pmin[1]),
     ]
 
 
-def dump_coords(coords: List[float]) -> str:
-    return ",".join(map("{:0.3f}".format, coords))
+def dump_coords(coords: Iterable[float]) -> str:
+    return ",".join(f"{coord:0.3f}" for coord in coords)
 
 
-def clean_id(id):
-    return re.sub(r"\W+", "_", id).strip("_")
+def clean_id(oid: str) -> str:
+    return re.sub(r"\W+", "_", oid).strip("_")
