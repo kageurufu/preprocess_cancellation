@@ -3,19 +3,34 @@ on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu, windows, macos]
+        python: [3.7.x, 3.8.x, 3.9.x, 3.10.x]
+
+    runs-on: ${{ matrix.os }}-latest
+    defaults:
+      run:
+        shell: bash
+
     steps:
-      - uses: actions/checkout@v2
-      - run: |
+      - uses: actions/checkout@v3
+
+      - if: ${{ matrix.os == 'ubuntu' }}
+        run: |
           sudo apt-get install -y libgeos-c1v5
-      - uses: actions/setup-python@v1
+
+      - uses: actions/setup-python@v4
         with:
-          python-version: '3.9.x'
+          python-version: ${{ matrix.python }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: false
+
       - run: |
-          pip install -U pip poetry
-          poetry install -E shapely
-        env:
-          POETRY_VIRTUALENVS_CREATE: false
+          poetry install --no-interaction -E shapely
 
       - name: Run Tests
         run: poetry run py.test
@@ -29,25 +44,33 @@ jobs:
         shell: bash
     runs-on: ${{ matrix.os }}-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          python-version: '3.9.x'
+          python-version: "3.9.x"
+
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
+          virtualenvs-create: false
+
       - name: Poetry install
-        run: poetry install --no-interaction --no-root
+        run: poetry install --no-interaction -E shapely
+
       - name: Run the build process
         run: poetry run pyinstaller --onefile --collect-all preprocess_cancellation -n preprocess_cancellation-${{ matrix.os }} preprocess_cancellation/__main__.py
+
+      - name: Test the built exe
+        run: ./dist/preprocess_cancellation-${{ matrix.os }} --output-dir testing --enable-shapely GCode/cura.gcode GCode/ideamaker.gcode GCode/m486.gcode GCode/prusaslicer.gcode GCode/prusaslicer-issue1.gcode GCode/slic3r.gcode GCode/superslicer.gcode
+
       - name: Archive production artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: preprocess_cancellation-${{ matrix.os }}
+          if-no-files-found: error
           path: |
             dist/preprocess_cancellation-${{ matrix.os }}
+            dist/preprocess_cancellation-${{ matrix.os }}.exe
 
   release:
     runs-on: ubuntu-latest
@@ -59,5 +82,5 @@ jobs:
       - name: Release tags
         uses: softprops/action-gh-release@v1
         with:
-         files: |
-           */preprocess_cancellation-*
+          files: |
+            */preprocess_cancellation-*

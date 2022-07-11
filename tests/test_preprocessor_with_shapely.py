@@ -43,8 +43,8 @@ def test_cli_with_shapely():
                                 "preprocess_cancellation",
                                 "--enable-shapely",
                                 "--output-dir",
-                                tempdir,
-                                gcode,
+                                str(tempdir),
+                                str(gcode),
                             ],
                         )
                         for gcode in gcode_path.glob("*.gcode")
