@@ -51,14 +51,19 @@ def preprocess_m486_to_klipper(
     infile.seek(0)
     current_object = None
     for line in infile:
+        if line.strip() and not line.startswith(";"):
+            yield from exclude_object_header(
+                [known_object for known_object in known_objects.values() if known_object.name != "-1"]
+            )
+
+        yield line
+
+        if line.strip() and not line.startswith(";"):
+            break
+
+    for line in infile:
         if line.upper().startswith("M486"):
             _, params = parse_gcode(line)
-
-            if "T" in params:
-                # Inject custom marker
-                yield from exclude_object_header(
-                    [known_object for known_object in known_objects.values() if known_object.name != "-1"]
-                )
 
             if "S" in params:
                 if current_object:

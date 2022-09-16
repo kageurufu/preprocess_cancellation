@@ -11,21 +11,28 @@ Current supported slicers:
   * GCode with Marlin M486 tags
 """
 
+from __future__ import annotations
+
 import io
 import logging
 import os
 import pathlib
 import shutil
 import tempfile
-from typing import Any, Callable, Generator, Optional, TypeVar
+from typing import TYPE_CHECKING
 
 from .layers import LayerFilter
-from .slicers import Preprocessor, identify_slicer_marker
+from .slicers import identify_slicer_marker
+
+if TYPE_CHECKING:
+    from typing import TYPE_CHECKING, Any, Callable, Generator, Optional, TypeVar
+
+    from .slicers import Preprocessor
+
+    PathLike = TypeVar("PathLike", str, pathlib.Path)
+
 
 logger = logging.getLogger(__name__)
-
-
-PathLike = TypeVar("PathLike", str, pathlib.Path)
 
 
 def preprocess_pipe(infile: io.TextIOBase, **_kw: Any) -> Generator[str, None, None]:

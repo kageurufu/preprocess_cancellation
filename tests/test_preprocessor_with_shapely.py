@@ -15,9 +15,11 @@ from preprocess_cancellation.slicers import (
 )
 
 try:
-    import shapely  # pylint: disable=unused-import
-except ImportError:
+    import shapely.geometry  # pylint: disable=unused-import
+except (OSError, ImportError):
     pytest.skip("Requires shapely installed", allow_module_level=True)
+except OSError:
+    pytest.skip("Requires libgeos installed", allow_module_level=True)
 
 
 gcode_path = pathlib.Path("./GCode")

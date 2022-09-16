@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "preprocess_cancellation"
-version = "0.3.a1"
+version = "0.3.a2"
 description = "GCode processor to add klipper exclude-object markers"
 readme = "README.md"
 authors = ["Franklyn Tackitt <im@frank.af>"]

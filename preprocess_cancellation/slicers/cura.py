@@ -53,12 +53,15 @@ def preprocess_cura_to_klipper(
 
     infile.seek(0)
     for line in infile:
+        if line.strip() and not line.startswith(";"):
+            yield from exclude_object_header(known_objects.values())
+
         yield line
+
         if line.strip() and not line.startswith(";"):
             break
 
     # Inject custom marker
-    yield from exclude_object_header(known_objects.values())
 
     current_object = None
     for line in infile:

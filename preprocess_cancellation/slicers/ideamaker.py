@@ -60,13 +60,15 @@ def preprocess_ideamaker_to_klipper(
 
     current_object = None
     for line in infile:
-        yield line
-
-        if line.startswith(";TOTAL_NUM:"):
-            total_num = int(line.split(":")[1].strip())
-            assert total_num == len(known_objects)
+        if line.strip() and not line.startswith(";"):
             yield from exclude_object_header(known_objects.values())
 
+        yield line
+
+        if line.strip() and not line.startswith(";"):
+            break
+
+    for line in infile:
         if line.startswith(";PRINTING_ID:"):
             printing_id = line.split(":")[1].strip()
             if current_object:

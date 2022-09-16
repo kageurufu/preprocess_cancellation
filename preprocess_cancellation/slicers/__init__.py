@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import io
 import logging
-from typing import Callable, Dict, Generator, Optional, Tuple
-
-from mypy_extensions import Arg, DefaultNamedArg, NamedArg
+from typing import TYPE_CHECKING
 
 from ..layers import LayerFilter
 from .cura import preprocess_cura_to_klipper
@@ -12,16 +10,22 @@ from .ideamaker import preprocess_ideamaker_to_klipper
 from .m486 import preprocess_m486_to_klipper
 from .slic3r import preprocess_slicer_to_klipper
 
-logger = logging.getLogger(__name__)
+if TYPE_CHECKING:
+    from typing import Callable, Dict, Generator, Optional, Tuple
 
-Preprocessor = Callable[
-    [
-        Arg(io.TextIOBase, "infile"),
-        DefaultNamedArg(bool, "use_shapely"),
-        NamedArg(LayerFilter, "layer_filter"),
-    ],
-    Generator[str, None, None],
-]
+    from mypy_extensions import Arg, DefaultNamedArg, NamedArg
+
+    Preprocessor = Callable[
+        [
+            Arg(io.TextIOBase, "infile"),
+            DefaultNamedArg(bool, "use_shapely"),
+            NamedArg(LayerFilter, "layer_filter"),
+        ],
+        Generator[str, None, None],
+    ]
+
+
+logger = logging.getLogger(__name__)
 
 
 # Note:

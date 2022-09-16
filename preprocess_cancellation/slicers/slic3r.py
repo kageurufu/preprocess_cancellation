@@ -48,11 +48,13 @@ def preprocess_slicer_to_klipper(
 
     infile.seek(0)
     for line in infile:
+        if line.strip() and not line.startswith(";"):
+            yield from exclude_object_header(known_objects.values())
+
         yield line
+
         if line.strip() and not line.startswith(";"):
             break
-
-    yield from exclude_object_header(known_objects.values())
 
     for line in infile:
         yield line
