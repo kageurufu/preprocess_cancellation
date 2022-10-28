@@ -10,6 +10,7 @@ import shutil
 import statistics
 import sys
 import tempfile
+import unicodedata
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypeVar
 
 __version__ = "0.2.0"
@@ -141,8 +142,9 @@ def _dump_coords(coords: List[float]) -> str:
     return ",".join(map("{:0.3f}".format, coords))
 
 
-def _clean_id(id):
-    return re.sub(r"\W+", "_", id).strip("_")
+def _clean_id(oid):
+    oid = unicodedata.normalize('NFKD',oid).encode('ascii','ignore').decode('utf-8') + "_" + str(hex(id(oid)))
+    return re.sub(r"\W+", "_", oid).strip("_")
 
 
 def parse_gcode(line):
