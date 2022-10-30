@@ -10,7 +10,6 @@ import shutil
 import statistics
 import sys
 import tempfile
-import unicodedata
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, TypeVar
 
 __version__ = "0.2.0"
@@ -143,7 +142,7 @@ def _dump_coords(coords: List[float]) -> str:
 
 
 def _clean_id(oid):
-    oid = unicodedata.normalize('NFKD',oid).encode('ascii','ignore').decode('utf-8') + "_" + str(hex(id(oid)))
+    oid = oid.encode('ascii','ignore').decode() + str(id(oid))
     return re.sub(r"\W+", "_", oid).strip("_")
 
 
