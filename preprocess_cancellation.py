@@ -142,8 +142,7 @@ def _dump_coords(coords: List[float]) -> str:
 
 
 def _clean_id(oid):
-    oid = oid.encode('ascii','ignore').decode() + str(id(oid))
-    return re.sub(r"\W+", "_", oid).strip("_")
+    return re.sub(r"\W+", "_", oid.encode('ascii','ignore').decode()).strip("_") + str(id(oid))
 
 
 def parse_gcode(line):
