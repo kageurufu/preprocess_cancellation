@@ -22,6 +22,22 @@ In your Print Settings, under Output Options, add `preprocess_cancellation.exe;`
 
 Then, all generated gcode should be automatically processed and rewritten to support cancellation.
 
+### Cura
+
+To implement the preprocessor into cura a dedicated python script is needed to call the executable.
+You find it in this repository in the cura folder - "PreprocessCancellation.py".
+Place it together with the executable in the cura configuration folder:
+#### Detailed Instructions:
+
+1. Click Help menu item.
+2. Click "Show Configuration Folder".
+3. Find the folder call "scripts". If you don't see one create one in the configuration folder.
+4. Place the python script PreprocessCancellation.py and the preprocess_cancellation executable for your os into the script folder.
+5. Restart Cura.
+6. Now, in Extensions > Post Processing > Modify G-Code. Select the "Add a script"-button and from the menu that appears choose "Preprocess Cancellation".
+
+Gcode files will be modified while saving. Notice that it can take serval seconds to finish.
+
 ### G-Codes for Object Cancelation
 
 There are 3 gcodes inserted in the files automatically, and 4 more used to control the 
