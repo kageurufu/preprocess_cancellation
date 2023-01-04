@@ -15,57 +15,72 @@
 
 from ..Script import Script
 import subprocess
+from tempfile import TemporaryDirectory
 import os
 
+
 class PreprocessCancellation(Script):
+    executablePath = os.path.dirname(__file__)
+    tempFileName = "_PreprocessCancellation.gcode"
+    executableName = "preprocess_cancellation"
+    executable = ""
+    timeout = 60.0
 
-  executablePath = os.path.dirname(__file__)
-  tempFileName = "_PreprocessCancellation.gcode"
-  executableName = "preprocess_cancellation"
-  timeout = 60
+    def __init__(self):
+        super().__init__()
+        from sys import platform
 
-  def __init__(self):
-      super().__init__()
-      from sys import platform
+        # choose executable based on OS type
+        if not (os.path.exists(f"{self.executablePath}/{self.executableName}")):
+            if platform == "linux" or platform == "linux2":
+                self.executableName = "preprocess_cancellation-ubuntu"
+            elif platform == "darwin":
+                self.executableName = "preprocess_cancellation-macos"
+            elif platform == "win32":
+                self.executableName = "preprocess_cancellation-windows.exe"
+        self.executable = os.path.join(self.executablePath, self.executableName)
 
-      # choose executable based on OS type
-      if not (os.path.exists(f"{self.executablePath}/{self.executableName}")):
-        if platform == "linux" or platform == "linux2":
-          self.executableName = "preprocess_cancellation-ubuntu"
-        elif platform == "darwin":
-          self.executableName = "preprocess_cancellation-macos"
-        elif platform == "win32":
-          self.executableName = "preprocess_cancellation-windows.exe"
+    def getSettingDataString(self):
+        return f"""\u007b
+            "name": "Preprocess Cancellation",
+            "key": "PreprocessCancellation",
+            "metadata": \u007b\u007d,
+            "version": 2,
+            "settings":
+            \u007b
+                "path":
+                \u007b
+                    "label": "Path to preprocess_cancellation",
+                    "description": "Full path to the preprocess_cancellation executable.",
+                    "type": "str",
+                    "default_value": "{self.executable}"
+                \u007d,
+                "timeout":
+                \u007b
+                    "label": "Timeout",
+                    "description": "Timeout for preprocess cancellation execution.",
+                    "type": "float",
+                    "default_value": "{self.timeout}"
+                \u007d
+            \u007d
+        \u007d"""
 
-  def getSettingDataString(self):
-    return """{
-      "name": "Preprocess Cancellation",
-      "key": "PreprocessCancellation",
-      "metadata": {},
-      "version": 2,
-      "settings": {
-      }
-    }"""
+    def execute(self, data):
 
-  def execute(self, data):
+        # create temporary working directory
+        with TemporaryDirectory() as tempDir:
+            tempFilePath = os.path.join(tempDir, self.tempFileName)
 
-    # remove old temporary files if exist
-    if os.path.exists(f"{self.executablePath}/{self.tempFileName}"):
-      os.remove(f"{self.executablePath}/{self.tempFileName}")
+            # write gcode to temp file for processing
+            with open(tempFilePath, 'w') as tempFile:
+                for line in data:
+                    tempFile.write(f'{line}')
 
-    # write gcode to temp file for processing
-    with open(f"{self.executablePath}/{self.tempFileName}", 'w') as tempfile:
-      for line in data:
-        tempfile.write(f'{line}')
+            # calling executable
+            proc = subprocess.Popen([self.getSettingValueByKey("path"), tempFilePath]).wait(self.getSettingValueByKey("timeout"))
+            if proc != 0:
+                raise RuntimeError(f"Failed to run Preprocess Cancellation - Returned: {proc}")
 
-    # calling executable
-    subprocess.Popen([f"{self.executablePath}/{self.executableName}", f"{self.executablePath}/{self.tempFileName}"]).wait(self.timeout)
-
-    # feed back processed gcode into memory and return data
-    processedData = []
-    with open(f"{self.executablePath}/{self.tempFileName}", 'r') as tempfile:
-      for line in tempfile:
-        processedData.append(line)
-    data = processedData
-
-    return data
+            # feed back processed gcode into memory and return data
+            with open(tempFilePath, 'r') as tempFile:
+                return tempFile.readlines()
