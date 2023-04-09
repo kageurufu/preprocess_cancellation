@@ -59,4 +59,4 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            */preprocess_cancellation-*.zip
+            */preprocess_cancellation*.zip
