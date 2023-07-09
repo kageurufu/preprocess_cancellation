@@ -69,6 +69,8 @@ def preprocess_ideamaker_to_klipper(
             break
 
     for line in infile:
+        yield line
+
         if line.startswith(";PRINTING_ID:"):
             printing_id = line.split(":")[1].strip()
             if current_object:
