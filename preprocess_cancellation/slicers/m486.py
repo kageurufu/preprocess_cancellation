@@ -26,7 +26,6 @@ def preprocess_m486_to_klipper(
     current_object: Optional[KnownObject] = None
 
     for line in infile:
-
         if line.startswith("M486"):
             _, params = parse_gcode(line)
             if "T" in params:

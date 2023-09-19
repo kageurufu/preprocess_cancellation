@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import io
 import logging
+import functools
 import os
 import pathlib
 import shutil
@@ -22,12 +23,10 @@ import tempfile
 from typing import TYPE_CHECKING
 
 from .layers import LayerFilter
-from .slicers import identify_slicer_marker
+from . import slicers
 
 if TYPE_CHECKING:
     from typing import TYPE_CHECKING, Any, Callable, Generator, Optional, TypeVar
-
-    from .slicers import Preprocessor
 
     PathLike = TypeVar("PathLike", str, pathlib.Path)
 
@@ -48,7 +47,7 @@ def preprocess_stream(
 ) -> Optional[bool]:
     logger.debug("Identifying slicer")
 
-    processor: Optional[Preprocessor] = None
+    processor: Optional[slicers.Preprocessor] = None
 
     for line in infile:
         if line.startswith("EXCLUDE_OBJECT_DEFINE") or line.startswith("DEFINE_OBJECT"):
@@ -58,7 +57,7 @@ def preprocess_stream(
             return True
 
         if not processor:
-            processor = identify_slicer_marker(line)
+            processor = slicers.identify_slicer_marker(line)
 
     if not processor:
         raise ValueError("Could not identify slicer")
@@ -105,3 +104,22 @@ def preprocess_file(
         tempfilepath.unlink()
 
     return bool(res)
+
+
+# Deprecated API, for compatibility with moonraker
+preprocess_cura = functools.partial(slicers.preprocess_cura_to_klipper, layer_filter=LayerFilter("*"))
+preprocess_m486 = functools.partial(slicers.preprocess_m486_to_klipper, layer_filter=LayerFilter("*"))
+preprocess_slicer = functools.partial(slicers.preprocess_slicer_to_klipper, layer_filter=LayerFilter("*"))
+preprocess_ideamaker = functools.partial(slicers.preprocess_ideamaker_to_klipper, layer_filter=LayerFilter("*"))
+
+
+__all__ = (
+    "preprocess_pipe",
+    "preprocess_stream",
+    "preprocess_file",
+    # Deprecated API, for compatibility with moonraker
+    "preprocess_cura",
+    "preprocess_m486",
+    "preprocess_slicer",
+    "preprocess_ideamaker",
+)

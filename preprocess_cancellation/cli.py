@@ -46,7 +46,6 @@ argparser.add_argument(
 )
 
 with cid(argparser.add_argument_group("Shape Processing")) as shape_group:
-
     with cid(shape_group.add_mutually_exclusive_group()) as shapely_group:
         shapely_group.add_argument(
             "--enable-shapely",
