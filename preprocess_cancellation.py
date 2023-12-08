@@ -274,18 +274,18 @@ def preprocess_cura(infile):
 
     infile.seek(0)
     for line in infile:
-        yield line
         if line.strip() and not line.startswith(";"):
+            # Inject custom marker
+            yield from header(len(known_objects))
+            for mesh_id, hull in known_objects.values():
+                yield from define_object(
+                    mesh_id,
+                    center=hull.center(),
+                    polygon=hull.exterior(),
+                )
+            yield line
             break
-
-    # Inject custom marker
-    yield from header(len(known_objects))
-    for mesh_id, hull in known_objects.values():
-        yield from define_object(
-            mesh_id,
-            center=hull.center(),
-            polygon=hull.exterior(),
-        )
+        yield line
 
     current_object = None
     for line in infile:
