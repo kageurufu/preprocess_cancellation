@@ -329,19 +329,21 @@ def preprocess_slicer(infile):
                 y = float(params["Y"])
                 current_hull.add_point(Point(x, y))
 
+
     infile.seek(0)
     for line in infile:
-        yield line
         if line.strip() and not line.startswith(";"):
+            # Inject custom marker
+            yield from header(len(known_objects))
+            for object_id, hull in known_objects.values():
+                yield from define_object(
+                    object_id,
+                    center=hull.center(),
+                    polygon=hull.exterior(),
+                )
+            yield line
             break
-
-    yield from header(len(known_objects))
-    for object_id, hull in known_objects.values():
-        yield from define_object(
-            object_id,
-            center=hull.center(),
-            polygon=hull.exterior(),
-        )
+        yield line
 
     for line in infile:
         yield line
