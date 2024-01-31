@@ -365,6 +365,8 @@ def preprocess_ideamaker(infile):
     current_hull: HullTracker = None
 
     for line in infile:
+        if line.startswith(";TOTAL_NUM:"):
+            total_num = int(line.split(":")[1].strip())
         if line.startswith(";PRINTING:"):
             name = line.split(":")[1].strip()
             id_line = next(infile)
@@ -390,17 +392,21 @@ def preprocess_ideamaker(infile):
     for line in infile:
         yield line
 
-        if line.startswith(";TOTAL_NUM:"):
-            total_num = int(line.split(":")[1].strip())
-            assert total_num == len(known_objects)
-            yield from header(total_num)
-            for id, (name, hull) in known_objects.items():
-                yield from define_object(
-                    name,
-                    center=hull.center(),
-                    polygon=hull.exterior(),
-                )
+        if line.strip() and not line.startswith(";"):
+           break
 
+    assert total_num == len(known_objects)
+    yield from header(total_num)
+    for id, (name, hull) in known_objects.items():
+        yield from define_object(
+            name,
+            center=hull.center(),
+            polygon=hull.exterior(),
+        )
+    yield "\n\n"
+
+    for line in infile:
+        yield line
         if line.startswith(";PRINTING_ID:"):
             printing_id = line.split(":")[1].strip()
             if current_object:
