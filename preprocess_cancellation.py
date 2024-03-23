@@ -433,8 +433,6 @@ def preprocess_simplify3d(infile):
     for line in infile:
         if line.startswith("; process"):
             object_name = line.split("ss ", maxsplit=1)[1].strip()
-            if object_name == "ENDGCODE":
-                continue
             if object_name not in known_objects:
                 known_objects[object_name] = KnownObject(_clean_id(object_name), HullTracker.create())
             current_hull = known_objects[object_name].hull
@@ -446,7 +444,7 @@ def preprocess_simplify3d(infile):
                 y = float(params["Y"])
                 current_hull.add_point(Point(x, y))
 
-        if line.startswith("; process ENDGCODE"):
+        if line.startswith("; layer end"):
             last_time_elapsed = line
 
     infile.seek(0)
@@ -473,8 +471,6 @@ def preprocess_simplify3d(infile):
                 yield from object_end_marker(current_object)
                 current_object = None
             mesh = line.split("ss ", maxsplit=1)[1].strip()
-            if mesh == "ENDGCODE":
-                continue
             current_object, _ = known_objects[mesh]
             yield from object_start_marker(current_object)
 
