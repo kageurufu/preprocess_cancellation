@@ -469,7 +469,7 @@ def preprocess_simplify3d(infile):
 
         if line.strip().lower().startswith("g"):
             _, params = parse_gcode(line)
-            if "Z" in params:
+            if "Z" in params and "F" in params:
                 z_position = line
 
         if line.startswith("; process"):
