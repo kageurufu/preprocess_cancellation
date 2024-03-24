@@ -15,7 +15,8 @@ The following slicers are supported:
 
 ### SuperSlicer, PrusaSlicer, and Slic3r
 
-Download the provided binary for your platform, and place it in with in your slicer's folder.
+Download the provided binary for your platform from the [git releases page](https://github.com/kageurufu/preprocess_cancellation/releases), and place it in with in your slicer's folder.
+ 
 
 In your Print Settings, under Output Options, add `preprocess_cancellation.exe;` to the 
 "Post-Processing Scripts". For mac or linux, you should just use `preprocess_cancellation;`
