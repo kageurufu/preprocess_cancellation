@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from preprocess_cancellation import preprocess_cura, preprocess_ideamaker, preprocess_m486, preprocess_slicer
+from preprocess_cancellation import preprocess_cura, preprocess_ideamaker, preprocess_m486, preprocess_slicer, preprocess_simplify3d
 from test_preprocessor import collect_definitions
 
 try:
@@ -262,6 +262,45 @@ def test_issue_1_prusaslicer_point_collection():
 
     assert results.count(f"EXCLUDE_OBJECT_START NAME=Shape_Box_id_0_copy_0") == 125
     assert results.count(f"EXCLUDE_OBJECT_END NAME=Shape_Box_id_0_copy_0") == 125
+
+
+def test_simplify3d():
+    with (gcode_path / "simplify3d.gcode").open("r") as f:
+        results = "".join(list(preprocess_ideamaker(f))).split("\n")
+
+    definitions = collect_definitions(results)
+
+    print(definitions)
+    assert (
+        "EXCLUDE_OBJECT_DEFINE NAME=Process_1 CENTER=139.977,144.991 POLYGON=[[137.7,142.7],[137.7,147.3],[142.3,147.3],[142.3,142.7],[137.7,142.7]]"
+        in definitions
+    )
+    assert (
+        "EXCLUDE_OBJECT_DEFINE NAME=Process_2 CENTER=150.023,145.009 POLYGON=[[147.7,142.7],[147.7,147.3],[152.3,147.3],[152.3,142.7],[147.7,142.7]]"
+        in definitions
+    )
+    assert (
+        "EXCLUDE_OBJECT_DEFINE NAME=Process_3 CENTER=145.019,154.973 POLYGON=[[140.99,151.0],[137.7,152.7],[137.7,157.3],[140.99,158.6],[149.01,159.0],[152.3,157.3],[152.3,152.7],[149.01,151.0],[140.99,151.0]]"
+        in definitions
+    )
+    assert (
+        "EXCLUDE_OBJECT_DEFINE NAME=Process_4 CENTER=159.945,144.826 POLYGON=[[159.939,142.7],[159.487,142.757],[159.054,142.903],[158.659,143.131],[158.314,143.435],[158.039,143.797],[157.847,144.191],[157.745,144.547],[157.7,145.003],[157.746,145.456],[157.882,145.896],[158.102,146.298],[158.394,146.646],[158.753,146.932],[159.157,147.139],[159.601,147.264],[160.063,147.298],[160.513,147.241],[160.947,147.095],[161.342,146.867],[161.687,146.563],[161.963,146.197],[162.161,145.786],[162.274,145.342],[162.299,144.952],[162.253,144.538],[162.118,144.103],[161.898,143.701],[161.6,143.347],[161.248,143.067],[160.84,142.858],[160.399,142.734],[159.939,142.7]]"
+        in definitions
+    )
+
+    assert results.count("EXCLUDE_OBJECT_START NAME=Process_1") == 48
+    assert results.count("EXCLUDE_OBJECT_END NAME=Process_1") == 48
+
+    assert results.count("EXCLUDE_OBJECT_START NAME=Process_2") == 48
+    assert results.count("EXCLUDE_OBJECT_END NAME=Process_2") == 48
+
+    assert results.count("EXCLUDE_OBJECT_START NAME=Process_3") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=Process_3") == 25
+
+    assert results.count("EXCLUDE_OBJECT_START NAME=Process_4") == 24
+    assert results.count("EXCLUDE_OBJECT_END NAME=Process_4") == 24
+
+    assert results.count("G1 Z") == 192
 
 
 def test_issue_2_retractions_included_in_bounding_boxes():

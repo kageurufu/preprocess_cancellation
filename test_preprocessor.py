@@ -3,7 +3,7 @@ import re
 import subprocess
 import sys
 
-from preprocess_cancellation import preprocess_cura, preprocess_ideamaker, preprocess_m486, preprocess_slicer
+from preprocess_cancellation import preprocess_cura, preprocess_ideamaker, preprocess_m486, preprocess_slicer, preprocess_simplify3d
 
 gcode_path = pathlib.Path("./GCode")
 
@@ -197,3 +197,29 @@ def test_issue_1_prusaslicer_point_collection():
 
     assert results.count(f"EXCLUDE_OBJECT_START NAME=Shape_Box_id_0_copy_0") == 125
     assert results.count(f"EXCLUDE_OBJECT_END NAME=Shape_Box_id_0_copy_0") == 125
+
+
+def test_Simplify3d():
+    with (gcode_path / "simplify3d.gcode").open("r") as f:
+        results = "".join(list(preprocess_simplify3d(f))).split("\n")
+
+    definitions = collect_definitions(results)
+
+    assert "EXCLUDE_OBJECT_DEFINE NAME=Process_1" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=Process_2" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=Process_3" in definitions
+    assert "EXCLUDE_OBJECT_DEFINE NAME=Process_4" in definitions
+
+    assert results.count("EXCLUDE_OBJECT_START NAME=Process_1") == 48
+    assert results.count("EXCLUDE_OBJECT_END NAME=Process_1") == 48
+
+    assert results.count("EXCLUDE_OBJECT_START NAME=Process_2") == 48
+    assert results.count("EXCLUDE_OBJECT_END NAME=Process_2") == 48
+
+    assert results.count("EXCLUDE_OBJECT_START NAME=Process_3") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=Process_3") == 25
+
+    assert results.count("EXCLUDE_OBJECT_START NAME=Process_4") == 24
+    assert results.count("EXCLUDE_OBJECT_END NAME=Process_4") == 24
+
+    assert results.count("G1 Z") == 192
