@@ -428,6 +428,7 @@ def preprocess_simplify3d(infile):
     known_objects: Dict[str, KnownObject] = {}
     current_hull: Optional[HullTracker] = None
     last_time_elapsed: str = None
+    z_position: str = None
 
     # iterate the file twice, to be able to inject the header markers
     for line in infile:
@@ -466,6 +467,11 @@ def preprocess_simplify3d(infile):
     for line in infile:
         yield line
 
+        if line.strip().lower().startswith("g"):
+            _, params = parse_gcode(line)
+            if "Z" in params:
+                z_position = line
+
         if line.startswith("; process"):
             if current_object:
                 yield from object_end_marker(current_object)
@@ -473,6 +479,8 @@ def preprocess_simplify3d(infile):
             mesh = line.split("ss ", maxsplit=1)[1].strip()
             current_object, _ = known_objects[mesh]
             yield from object_start_marker(current_object)
+            if z_position:
+                yield z_position
 
         if line == last_time_elapsed and current_object:
             yield from object_end_marker(current_object)
