@@ -3,15 +3,16 @@ name = "preprocess_cancellation"
 version = "0.2.1"
 description = "GCode processor to add klipper cancel-object markers"
 readme = "README.md"
-authors = ["Franklyn Tackitt <im@frank.af>"]
-repository = "https://github.com/kageurufu/cancelobject-preprocessor"
+authors = [
+    {name="Franklyn Tackitt", email="git@frank.af"},
+]
 license = "GPL-3.0-only"
-requires-python = ">=3.6.2"
+requires-python = ">=3.8"
 dependencies = []
 
 [project.optional-dependencies]
 shapely = [
-    "shapely>=1.8.5",
+    "shapely>=2.0.7",
 ]
 
 [project.scripts]
