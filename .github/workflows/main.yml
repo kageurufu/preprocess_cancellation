@@ -3,25 +3,26 @@ on: [push, pull_request]
 
 jobs:
   test:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.6", "3.7", "3.8","3.9","3.10","3.11","3.12","3.13"]
     runs-on: ubuntu-latest
     steps:      
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
       - run: |
           sudo apt-get install -y libgeos-c1v5
-      - uses: actions/setup-python@v1
-        with: 
-          python-version: '3.9.x'
       - run: |
-          pip install -U pip poetry
-          poetry install -E shapely
-        env:
-          POETRY_VIRTUALENVS_CREATE: false
-      
+          uv sync --extra shapely
       - name: Run Tests
-        run: poetry run py.test
+        run: uv run py.test
 
   build:
     strategy:
+      fail-fast: false
       matrix:
         os: 
           - ubuntu
@@ -32,19 +33,10 @@ jobs:
         shell: bash
     runs-on: ${{ matrix.os }}-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
-        with: 
-          python-version: '3.9.x'
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-      - name: Poetry install
-        run: poetry install --no-interaction --no-root
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
       - name: Run the build process
-        run: poetry run pyinstaller --onefile preprocess_cancellation.py
+        run: uv run pyinstaller --onefile preprocess_cancellation.py
       - name: Archive production artifacts
         uses: actions/upload-artifact@v2
         with:

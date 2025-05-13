@@ -1,4 +1,4 @@
-[tool.poetry]
+[project]
 name = "preprocess_cancellation"
 version = "0.2.1"
 description = "GCode processor to add klipper cancel-object markers"
@@ -6,33 +6,37 @@ readme = "README.md"
 authors = ["Franklyn Tackitt <im@frank.af>"]
 repository = "https://github.com/kageurufu/cancelobject-preprocessor"
 license = "GPL-3.0-only"
+requires-python = ">=3.6.2"
+dependencies = []
 
-[tool.poetry.urls]
-"Bug Tracker" = "https://github.com/kageurufu/cancelobject-preprocessor/issues"
+[project.optional-dependencies]
+shapely = [
+    "shapely>=1.8.5",
+]
 
-[tool.poetry.scripts]
+[project.scripts]
 preprocess_cancellation = 'preprocess_cancellation:_main'
 
-[tool.poetry.extras]
-shapely = [ "shapely" ]
+[dependency-groups]
+dev = [
+    "coverage[toml]>=6.2",
+    "isort>=5.10.1",
+    "matplotlib>=3.3.4",
+    "pyinstaller>=4.10",
+    "pytest>=7.0.1",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.0.17",
+    "shapely>=1.8.5.post1",
+]
 
-[tool.poetry.dependencies]
-python = ">= 3.6.2"
+[project.urls]
+Homepage = "https://github.com/kageurufu/cancelobject-preprocessor"
+Repository = "https://github.com/kageurufu/cancelobject-preprocessor"
+Issues = "https://github.com/kageurufu/cancelobject-preprocessor/issues"
 
-shapely = { version = "*", optional = true }
-
-[tool.poetry.dev-dependencies]
-black = "*"
-coverage = { version = "*", extras = ["toml"] }
-isort = "*"
-matplotlib = "*"
-pyinstaller = "*"
-pytest = "*"
-pytest-cov = "*"
-shapely = "*"
-
-[tool.black]
-line_length = 120
+[tool.ruff]
+line-length = 120
+exclude = ["STLs/"]
 
 [tool.pytest.ini_options]
 addopts = '-v --cov=preprocess_cancellation'

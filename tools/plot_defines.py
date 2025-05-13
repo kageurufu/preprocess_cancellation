@@ -1,13 +1,10 @@
-import argparse
 import json
 import sys
 
 import matplotlib.pyplot
 
 for filename in sys.argv[1:]:
-
     with open(filename, "r") as file:
-
         fig = matplotlib.pyplot.subplot()
         for line in file:
             if not line.upper().startswith("DEFINE_OBJECT") or line.upper().startswith("EXCLUDE_OBJECT_DEFINE"):

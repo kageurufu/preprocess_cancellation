@@ -38,14 +38,11 @@ class Point(NamedTuple):
 
 
 class HullTracker:
-    def add_point(self, point: Point):
-        ...
+    def add_point(self, point: Point): ...
 
-    def center(self) -> Point:
-        ...
+    def center(self) -> Point: ...
 
-    def exterior(self) -> list[Point]:
-        ...
+    def exterior(self) -> list[Point]: ...
 
     @classmethod
     def create(cls):
@@ -197,7 +194,6 @@ def preprocess_m486(infile):
     current_hull: Optional[HullTracker] = None
 
     for line in infile:
-
         if line.startswith("M486"):
             _, params = parse_gcode(line)
             if "T" in params:
@@ -329,7 +325,6 @@ def preprocess_slicer(infile):
                 y = float(params["Y"])
                 current_hull.add_point(Point(x, y))
 
-
     infile.seek(0)
     for line in infile:
         if line.strip() and not line.startswith(";"):
@@ -393,7 +388,7 @@ def preprocess_ideamaker(infile):
         yield line
 
         if line.strip() and not line.startswith(";"):
-           break
+            break
 
     assert total_num == len(known_objects)
     yield from header(total_num)
