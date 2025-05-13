@@ -74,6 +74,8 @@ def test_m486():
     assert "EXCLUDE_OBJECT_DEFINE NAME=2 " in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=3 " in output
 
+    assert "G1 X137.005 Y163.371 E0.29649" in results
+
     assert results.count("EXCLUDE_OBJECT_START NAME=0") == 25
     assert results.count("EXCLUDE_OBJECT_END NAME=0") == 25
 
@@ -98,11 +100,26 @@ def test_superslicer():
                 )
             )
         )
+        results = output.split("\n")
 
     assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_0" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_1" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=union_3_id_2_copy_0" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=cylinder_2_id_1_copy_0" in output
+
+    assert "G1 X164.398 Y143.144 E0.05245" in results
+
+    assert results.count("EXCLUDE_OBJECT_START NAME=cube_1_id_0_copy_0") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=cube_1_id_0_copy_0") == 25
+
+    assert results.count("EXCLUDE_OBJECT_START NAME=cube_1_id_0_copy_1") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=cube_1_id_0_copy_1") == 25
+
+    assert results.count("EXCLUDE_OBJECT_START NAME=union_3_id_2_copy_0") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=union_3_id_2_copy_0") == 25
+
+    assert results.count("EXCLUDE_OBJECT_START NAME=cylinder_2_id_1_copy_0") == 25
+    assert results.count("EXCLUDE_OBJECT_END NAME=cylinder_2_id_1_copy_0") == 25
 
 
 def test_prusaslicer():
@@ -122,6 +139,8 @@ def test_prusaslicer():
     assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_0 " in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_id_0_copy_1 " in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=union_3_id_2_copy_0 " in output
+
+    assert "G1 X135.298 Y137.411 E0.03649" in results
 
     assert results.count("EXCLUDE_OBJECT_START NAME=cylinder_2_id_1_copy_0") == 25
     assert results.count("EXCLUDE_OBJECT_END NAME=cylinder_2_id_1_copy_0") == 25
@@ -154,6 +173,8 @@ def test_slic3r():
     assert "EXCLUDE_OBJECT_DEFINE NAME=cylinder_2_stl_id_1_copy_0" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=union_3_stl_id_2_copy_0" in output
 
+    assert "G1 X97.912 Y94.709 E3.82225" in results
+
     assert results.count("EXCLUDE_OBJECT_START NAME=cube_1_stl_id_0_copy_0") == 16
     assert results.count("EXCLUDE_OBJECT_END NAME=cube_1_stl_id_0_copy_0") == 16
 
@@ -185,6 +206,8 @@ def test_cura():
     assert "EXCLUDE_OBJECT_DEFINE NAME=union_3_stl" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=cube_1_stl_1" in output
 
+    assert "G1 X152.563 Y136.21 E0.02148" in results
+
     assert results.count("EXCLUDE_OBJECT_START NAME=cylinder_2_stl") == 25
     assert results.count("EXCLUDE_OBJECT_END NAME=cylinder_2_stl") == 25
 
@@ -215,6 +238,8 @@ def test_ideamaker():
     assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part2_3m" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part0_3m" in output
     assert "EXCLUDE_OBJECT_DEFINE NAME=test_bed_part0_1_3m" in output
+
+    assert "G1 X100.759 Y106.827 E11.9581" in results
 
     assert results.count("EXCLUDE_OBJECT_START NAME=test_bed_part1_3mf") == 32
     assert results.count("EXCLUDE_OBJECT_END NAME=test_bed_part1_3mf") == 32
